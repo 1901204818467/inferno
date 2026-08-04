@@ -1,0 +1,22 @@
+name: Keepalive
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'   # once a month
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Touch a file and commit
+        run: |
+          date > .github/last-alive.txt
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .github/last-alive.txt
+          git commit -m "keepalive" || echo "nothing to commit"
+          git push
