@@ -1,23 +1,30 @@
 name: Daily Discord Reminder
-
 on:
   schedule:
-    - cron: '30 21 * * *'  # CRON TIME 
+    - cron: '30 21 * * *'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   send-reminder:
     runs-on: ubuntu-latest
     env:
       WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       USER_ID: ${{ secrets.DISCORD_USER_ID }}
-      REMINDER_MESSAGE: "Refuel Inferno Minions"   # <- edit this to change the text
+      REMINDER_MESSAGE: "Refuel Inferno Minions"
     steps:
       - name: Send Discord ping
+        id: send
         run: |
           payload=$(jq -n --arg uid "$USER_ID" --arg msg "$REMINDER_MESSAGE" \
             '{content: ("<@" + $uid + "> " + $msg)}')
-          curl -s -o /dev/null -H "Content-Type: application/json" -d "$payload" "$WEBHOOK_URL"
+          response=$(curl -s -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true")
+          message_id=$(echo "$response" | jq -r '.id')
+          echo "message_id=$message_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait 3 hours
+        run: sleep 10800
+
+      - name: Delete the message
+        run: |
+          curl -s -X DELETE "${WEBHOOK_URL}/messages/${{ steps.send.outputs.message_id }}"
