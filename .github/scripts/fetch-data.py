@@ -9,21 +9,45 @@
   shows instabuy and instasell. Gabagool Distillate and Inferno Fuel Block
   show both the buy-order price and the instabuy price. Crude Gabagool is
   free (the minions produce it). The total uses instabuy prices.
+- Price spike alert: robust heuristic on Coflnet's 7-day bazaar history
+  (sky.coflnet.com/api/bazaar/{tag}/history/week). Baseline is the weekly
+  median, normal noise is 3x the median absolute deviation, and an item
+  must be both >=10% from the median and outside that noise band to fire
+  (upward moves only - a drop is an opportunity, not a warning). The
+  order book is checked for thinness to flag likely price painting.
+- Stock-up signal: the same median + MAD rule applied to the daily fuel
+  bill; fires when the bill is clearly below its weekly median (cheap day
+  to stock up).
+- Craft-vs-buy tip: watches the Fuel Gabagool bazaar price (the buyable
+  intermediate - the finished fuel itself has no market) against its
+  craft cost; fires only when buying is clearly cheaper.
+- Snapshots: appends one raw line to prices.jsonl and rewrites
+  prices.json (badge-friendly strings) in the repo working tree.
+- Freshness: writes the fetch timestamp so the embed can show how many
+  seconds ago the prices were pulled.
 
-Writes animal-name.txt, animal-fact.txt, animal-image.txt and
-shopping-list.txt into $RUNNER_TEMP. Never raises; every source has a
-graceful failure path so the reminder always sends.
+Writes animal-name.txt, animal-fact.txt, animal-image.txt,
+shopping-list.txt and profit.txt into $RUNNER_TEMP. Never raises; every
+source has a graceful failure path so the reminder always sends.
 """
 
 import json
 import os
 import random
+import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 UA = {"User-Agent": "inferno-reminder/1.0 (GitHub Actions daily reminder)"}
 TMP = os.environ.get("RUNNER_TEMP", "/tmp")
+COFL = "https://sky.coflnet.com/api/bazaar"
+MIN_PCT = 10.0   # % from the weekly median before an item can alert
+MAD_MULT = 3.0   # outlier cutoff: 3x the median absolute deviation
+THIN_UNITS = 25  # top-3 ask units below which the order book is 'thin'
+GABAGOOL = "FUEL_GABAGOOL"   # buyable fuel intermediate (finished fuel has no market)
+BUY_CHEAP_PCT = 5.0           # buy-vs-craft must beat crafting by this % to tip
 
 # Profit model constants, from Herodirk's Minion Calculator for this exact
 # setup (25x Inferno T3, Fuel Gabagool grade, Gabagool Distillate, SC3000,
@@ -109,13 +133,28 @@ FACTS = [
 
 
 def get(url, timeout=20, tries=2):
-    """GET JSON with a retry; raises the last error when all tries fail."""
+    """GET JSON with a retry; raises the last error when all tries fail.
+
+    Rate-limited (429) responses honour Retry-After, capped at 10s, since
+    Coflnet asks for ~1 request/sec and can throttle bursts.
+    """
     last = None
     for attempt in range(tries):
         try:
             req = urllib.request.Request(url, headers=UA)
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            last = exc
+            wait = 0.6 * (attempt + 1)
+            if exc.code == 429 and exc.headers:
+                ra = exc.headers.get("Retry-After")
+                if ra:
+                    try:
+                        wait = min(float(ra), 10.0)
+                    except ValueError:
+                        pass
+            time.sleep(wait)
         except Exception as exc:
             last = exc
             time.sleep(0.6 * (attempt + 1))
@@ -124,6 +163,18 @@ def get(url, timeout=20, tries=2):
 
 def write_file(name, text):
     with open(os.path.join(TMP, name), "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def repo_write(name, text):
+    """Write into the repo working tree (cwd is the repo root in Actions)."""
+    with open(name, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def repo_append(name, text):
+    """Append into the repo working tree (cwd is the repo root in Actions)."""
+    with open(name, "a", encoding="utf-8") as f:
         f.write(text)
 
 
@@ -156,13 +207,168 @@ def fetch_animal():
     print("animal: %s (no image available)" % title)
 
 
+def cofl_week_buy(tag):
+    """List of instabuy prices (2-hourly, last 7 days) from Coflnet.
+
+    The 'buy' field matches Hypixel's buyPrice (verified empirically).
+    Returns None if the call fails or the history is empty.
+    """
+    try:
+        h = get(COFL + "/" + tag + "/history/week", timeout=20)
+    except Exception:
+        return None
+    if not isinstance(h, list):
+        return None
+    vals = [p.get("buy") for p in h if isinstance(p, dict) and p.get("buy")]
+    return vals or None
+
+
+def median(xs):
+    s = sorted(xs)
+    n = len(s)
+    if n % 2:
+        return s[n // 2]
+    return (s[n // 2 - 1] + s[n // 2]) / 2.0
+
+
+def fmt(n):
+    if n <= 0:
+        return ""
+    if n >= 1000000:
+        s = "%.2f" % (n / 1000000.0)
+        return s.rstrip("0").rstrip(".") + "M"
+    if n >= 1000:
+        s = "%.1f" % (n / 1000.0)
+        return s.rstrip("0").rstrip(".") + "K"
+    return str(int(n))
+
+
+def book_thin(tag):
+    """True if the top of the sell order book is suspiciously thin - a
+    likely price paint. One extra call, only used when an alert fires."""
+    try:
+        s = get(COFL + "/" + tag + "/snapshot", timeout=20)
+    except Exception:
+        return False
+    asks = s.get("sellOrders") or []
+    if not asks:
+        return False
+    asks = sorted(asks, key=lambda a: a.get("pricePerUnit") or 0)
+    top = sum(a.get("amount") or 0 for a in asks[:3])
+    return top < THIN_UNITS
+
+
+def price_spikes(items, weeks):
+    """items: (short name, bazaar tag, today's instabuy). weeks: dict of
+    tag -> 7-day instabuy series (fetched once by the caller). Returns an
+    alert line for items clearly ABOVE their normal 7-day range, or ''.
+
+    Drops are not alerts - the stock-up signal covers those. Heuristics
+    (median + MAD, robust to a manipulated window):
+    - baseline = median of the week's instabuy series
+    - normal noise = MAD_MULT * MAD around the median
+    - an item alerts only if today is BOTH above that noise band
+      (statistically abnormal) AND >= MIN_PCT above the median (big
+      enough to matter), so a normal 5% wiggle never fires but a clear
+      spike does.
+    - the order book is checked for thinness to flag likely manipulation.
+    """
+    parts = []
+    for name, tag, today in items:
+        if today <= 0:
+            continue
+        week = weeks.get(tag) or []
+        if len(week) < 3:
+            continue
+        med = median(week)
+        if med <= 0:
+            continue
+        mad = median([abs(x - med) for x in week])
+        noise = MAD_MULT * max(mad, med * 0.001)
+        pct = (today - med) / med * 100.0
+        if (today - med) >= noise and pct >= MIN_PCT:
+            label = "%s %+.0f%%" % (name, pct)
+            if book_thin(tag):
+                label += " (thin)"
+            parts.append(label)
+    if not parts:
+        return ""
+    return "Price alert - %s vs 7d avg" % " | ".join(parts)
+
+
+def bill_dip(weeks, today_bill, qtys):
+    """'Stock up' line when today's fuel bill is clearly below its weekly
+    median, or ''. today_bill is the daily bill at instabuy; qtys maps
+    each bazaar tag to its daily quantity. The weekly bill series is
+    rebuilt from the per-item instabuy histories (same median + MAD rule
+    as price_spikes, applied to the bill as a whole).
+    """
+    if today_bill <= 0:
+        return ""
+    series = [
+        w for w in (
+            weeks.get("SULPHURIC_COAL"),
+            weeks.get("CRUDE_GABAGOOL_DISTILLATE"),
+            weeks.get("INFERNO_FUEL_BLOCK"),
+        ) if w
+    ]
+    if len(series) < 3:
+        return ""
+    n = min(len(s) for s in series)
+    if n < 3:
+        return ""
+    bills = [
+        sum(qtys[tag] * (weeks[tag][i] or 0) for tag in qtys)
+        for i in range(n)
+    ]
+    med = median(bills)
+    if med <= 0:
+        return ""
+    mad = median([abs(x - med) for x in bills])
+    noise = MAD_MULT * max(mad, med * 0.001)
+    pct = (med - today_bill) / med * 100.0
+    if (med - today_bill) >= noise and pct >= MIN_PCT:
+        return "Stock up - fuel bill %d%% below 7d avg" % int(pct)
+    return ""
+
+
+def craft_buy_tip(gab_bo, coal_ib, gab_vol):
+    """'Buy instead of craft' tip for the fuel, or ''.
+
+    The finished Inferno Minion Fuel has no market (not on the bazaar,
+    nothing on the AH), so this watches the buyable intermediate, Fuel
+    Gabagool, against its craft cost. Crafting one costs 27 Crude Gabagool
+    (free from the minions) + 1 Sulphuric Coal, so the marginal craft cost
+    is just the coal. Fires only when buying at the buy-order price beats
+    that by BUY_CHEAP_PCT and there is real supply.
+    """
+    if gab_bo <= 0 or coal_ib <= 0:
+        return ""
+    if gab_vol < 25 * 7:  # less than a week's worth of supply on the market
+        return ""
+    craft = coal_ib
+    if gab_bo <= craft * (1.0 - BUY_CHEAP_PCT / 100.0):
+        saved = (craft - gab_bo) * 25
+        return "Fuel tip - buy Fuel Gabagool, save %s/day" % fmt(saved)
+    return ""
+
+
 def fetch_prices():
     products = {}
+    bazaar_age = -1.0
     try:
         bz = get("https://api.hypixel.net/skyblock/bazaar", timeout=30)
         products = (bz or {}).get("products") or {}
+        last = (bz or {}).get("lastUpdated") or 0
+        if last:
+            ms = last if last > 10 ** 11 else last * 1000.0  # epoch ms or s
+            bazaar_age = max(0.0, (time.time() * 1000 - ms) / 1000.0)
+            print("bazaar snapshot age: %.0fs (fetched live this run)" % bazaar_age)
     except Exception:
         pass
+    # timestamp for the embed footer: exactly when the bazaar data was
+    # pulled regardless of whether the profit block can compute income.
+    write_file("prices-fetched-at.txt", str(int(time.time())))
 
     def prices(tag):
         """Return (buy order price, instabuy price) for a bazaar item.
@@ -182,16 +388,15 @@ def fetch_prices():
             return b, b
         return min(b, s), max(b, s)
 
-    def fmt(n):
-        if n <= 0:
-            return ""
-        if n >= 1000000:
-            s = "%.2f" % (n / 1000000.0)
-            return s.rstrip("0").rstrip(".") + "M"
-        if n >= 1000:
-            s = "%.1f" % (n / 1000.0)
-            return s.rstrip("0").rstrip(".") + "K"
-        return str(int(n))
+    def vol(tag):
+        """7-day moving buy volume for a bazaar item, or 0."""
+        q = (products.get(tag) or {}).get("quick_status") or {}
+        return q.get("buyMovingWeek") or q.get("buyVolume") or 0
+
+    def sellvol(tag):
+        """7-day moving sell volume for a bazaar item, or 0."""
+        q = (products.get(tag) or {}).get("quick_status") or {}
+        return q.get("sellMovingWeek") or q.get("sellVolume") or 0
 
     def pair(bo, ib):
         if bo <= 0 or ib <= 0:
@@ -203,8 +408,11 @@ def fetch_prices():
     coal_bo, coal_ib = prices("SULPHURIC_COAL")
     dist_bo, dist_ib = prices("CRUDE_GABAGOOL_DISTILLATE")
     fb_bo, fb_ib = prices("INFERNO_FUEL_BLOCK")
+    gab_bo, gab_ib = prices(GABAGOOL)
+    gab_q = (products.get(GABAGOOL) or {}).get("quick_status") or {}
+    gab_vol = gab_q.get("buyMovingWeek") or gab_q.get("buyVolume") or 0
 
-    lines = ["675x Crude Gabagool - free (your minions make it)"]
+    lines = ["675x Crude Gabagool - free"]
     total = 0
     all_priced = True
 
@@ -255,16 +463,8 @@ def fetch_prices():
     # volume-averaged sell prices.
     crude_sell, crude_order = prices("CRUDE_GABAGOOL")
     very_sell, very_order = prices("VERY_CRUDE_GABAGOOL")
-    if crude_sell > 0 and very_sell > 0 and all_priced:
-        sold_crude = PROFIT["crude_per_day"] - PROFIT["crude_used_per_day"]
-        income_sell = (
-            sold_crude * crude_sell
-            + PROFIT["very_crude_per_day"] * very_sell
-        ) * (1.0 - PROFIT["sell_tax"])
-        income_order = (
-            sold_crude * crude_order
-            + PROFIT["very_crude_per_day"] * very_order
-        ) * (1.0 - PROFIT["sell_tax"])
+    cost_bo = cost_ib = 0.0
+    if all_priced:
         cost_bo = (
             PROFIT["coal_per_day"] * coal_bo
             + PROFIT["distillate_per_day"] * dist_bo
@@ -275,19 +475,124 @@ def fetch_prices():
             + PROFIT["distillate_per_day"] * dist_ib
             + PROFIT["fuel_block_per_day"] * fb_ib
         )
+    # 7-day instabuy history, fetched once and shared by the spike alert
+    # and the stock-up signal (3 Coflnet calls, ~1/sec as they ask).
+    weeks = {}
+    for i, tag in enumerate(("SULPHURIC_COAL", "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK")):
+        if i:
+            time.sleep(0.8)
+        weeks[tag] = cofl_week_buy(tag)
+    spike = price_spikes([
+        ("coal", "SULPHURIC_COAL", coal_ib),
+        ("distillate", "CRUDE_GABAGOOL_DISTILLATE", dist_ib),
+        ("fuel block", "INFERNO_FUEL_BLOCK", fb_ib),
+    ], weeks)
+    stock = bill_dip(weeks, cost_ib, {
+        "SULPHURIC_COAL": PROFIT["coal_per_day"],
+        "CRUDE_GABAGOOL_DISTILLATE": PROFIT["distillate_per_day"],
+        "INFERNO_FUEL_BLOCK": PROFIT["fuel_block_per_day"],
+    })
+    tip = craft_buy_tip(gab_bo, coal_ib, gab_vol)
+    extras = [e for e in (spike, stock, tip) if e]
+    if crude_sell > 0 and very_sell > 0 and all_priced:
+        sold_crude = PROFIT["crude_per_day"] - PROFIT["crude_used_per_day"]
+        income_sell = (
+            sold_crude * crude_sell
+            + PROFIT["very_crude_per_day"] * very_sell
+        ) * (1.0 - PROFIT["sell_tax"])
+        income_order = (
+            sold_crude * crude_order
+            + PROFIT["very_crude_per_day"] * very_order
+        ) * (1.0 - PROFIT["sell_tax"])
         net_bo = income_sell - cost_bo
         net_ib = income_sell - cost_ib
         plines = [
-            "Income - %s instasell / %s sell order"
+            "Income - %s instasell | %s sell order"
             % (fmt(income_sell), fmt(income_order)),
-            "Fuel - %s buy order / %s instabuy" % (fmt(cost_bo), fmt(cost_ib)),
-            "Net - %s/day buy order / %s/day instabuy"
+            "Fuel - %s buy order | %s instabuy" % (fmt(cost_bo), fmt(cost_ib)),
+            "Net - %s/day buy order | %s/day instabuy"
             % (fmt(net_bo), fmt(net_ib)),
-        ]
+        ] + extras
         write_file("profit.txt", "\n".join(plines))
-        print("profit: income_sell=%s income_order=%s cost_bo=%s cost_ib=%s net_bo=%s net_ib=%s" % (
+        day = time.strftime("%Y-%m-%d", time.gmtime())
+        coal_sub = int(PROFIT["coal_per_day"] * coal_ib)
+        dist_sub = int(PROFIT["distillate_per_day"] * dist_ib)
+        fb_sub = int(PROFIT["fuel_block_per_day"] * fb_ib)
+        stock_pct = None
+        # parse per-item spike percentages for structured log 
+        spike_pct_map = {}
+        if spike:
+            for m in re.finditer(r"(\w[\w\s]*?)\s+([+-]?\d+)%", spike):
+                spike_pct_map[m.group(1).strip()] = int(m.group(2))
+        if stock:
+            m = re.search(r"(\d+)%", stock)
+            if m:
+                stock_pct = int(m.group(1))
+        write_file("stats-day.json", json.dumps({
+            "date": day,
+            "net_bo": int(net_bo), "net_ib": int(net_ib),
+            "income_sell": int(income_sell), "income_order": int(income_order),
+            "spent_bo": int(cost_bo), "spent_ib": int(cost_ib),
+            "spike_fired": bool(spike), "spike_items": spike or None,
+            "stockup_fired": bool(stock), "stockup_pct": stock_pct,
+            "craftbuy_fired": bool(tip),
+            "craftbuy_savings": int(round((coal_ib - gab_bo) * 25)) if tip and gab_bo > 0 and coal_ib > 0 else None,
+        }))
+        repo_write("prices.json", json.dumps({
+            "date": day,
+            "crude": "free",
+            "coal": fmt(coal_ib) or "-",
+            "distillate": fmt(dist_ib) or "-",
+            "fuel_block": fmt(fb_ib) or "-",
+            "fuel_bill": fmt(cost_ib) or "-",
+            "income_sell": (fmt(income_sell) + "/day") if income_sell else "-",
+            "income_order": (fmt(income_order) + "/day") if income_order else "-",
+            "net_buy_order": (fmt(net_bo) + "/day") if net_bo else "-",
+            "net_instabuy": (fmt(net_ib) + "/day") if net_ib else "-",
+        }, indent=1))
+        repo_append("prices.jsonl", json.dumps({
+            "date": day,
+            "ts": int(time.time()),
+            "dow": int(time.strftime("%w", time.gmtime())),
+            "bazaar_age_s": int(bazaar_age),
+            "coal_bo": int(coal_bo), "coal_ib": int(coal_ib),
+            "dist_bo": int(dist_bo), "dist_ib": int(dist_ib),
+            "fb_bo": int(fb_bo), "fb_ib": int(fb_ib),
+            "gab_bo": int(gab_bo), "gab_ib": int(gab_ib),
+            "crude_sell": int(crude_sell),
+            "crude_order": int(crude_order),
+            "very_crude_ib": int(very_sell),
+            "very_crude_order": int(very_order),
+            "coal_subtotal": coal_sub, "dist_subtotal": dist_sub,
+            "fb_subtotal": fb_sub,
+            "bill_bo": int(cost_bo), "bill_ib": int(cost_ib),
+            "income_sell": int(income_sell), "income_order": int(income_order),
+            "net_bo": int(net_bo), "net_ib": int(net_ib),
+            "spike_items": spike or None,
+            "stockup_fired": bool(stock), "stockup_pct": stock_pct,
+            "craftbuy_fired": bool(tip),
+            "craftbuy_savings": int(round((coal_ib - gab_bo) * 25)) if tip and gab_bo > 0 and coal_ib > 0 else None,
+            "spike_coal_pct": spike_pct_map.get("coal"),
+            "spike_dist_pct": spike_pct_map.get("distillate"),
+            "spike_fb_pct": spike_pct_map.get("fuel block"),
+            "coal_vol": vol("SULPHURIC_COAL"),
+            "dist_vol": vol("CRUDE_GABAGOOL_DISTILLATE"),
+            "fb_vol": vol("INFERNO_FUEL_BLOCK"),
+            "crude_vol": vol("CRUDE_GABAGOOL"),
+            "gab_vol": int(gab_vol),
+            "coal_sellvol": sellvol("SULPHURIC_COAL"),
+            "dist_sellvol": sellvol("CRUDE_GABAGOOL_DISTILLATE"),
+            "fb_sellvol": sellvol("INFERNO_FUEL_BLOCK"),
+            "crude_sellvol": sellvol("CRUDE_GABAGOOL"),
+            "gab_sellvol": sellvol(GABAGOOL),
+        }) + "\n")
+        print("profit: income_sell=%s income_order=%s cost_bo=%s cost_ib=%s net_bo=%s net_ib=%s extras=%s" % (
             fmt(income_sell), fmt(income_order), fmt(cost_bo), fmt(cost_ib),
-            fmt(net_bo), fmt(net_ib)))
+            fmt(net_bo), fmt(net_ib), " | ".join(extras) or "-"))
+    elif extras:
+        # No profit data this run, but an alert is still worth seeing.
+        write_file("profit.txt", "\n".join(extras))
+        print("profit: unavailable, extras=%s" % " | ".join(extras))
 
 
 def main():

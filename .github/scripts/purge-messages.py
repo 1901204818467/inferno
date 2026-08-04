@@ -27,7 +27,7 @@ def main():
     if not url:
         # No webhook URL -> nothing was purged, so no survivors file is
         # written and the caller keeps the state untouched.
-        print("no WEBHOOK_URL set, nothing to purge")
+        print("purge: no WEBHOOK_URL set, nothing to purge")
         return
     try:
         with open(STATE_FILE, encoding="utf-8") as f:
@@ -39,21 +39,27 @@ def main():
     if legacy:
         ids = ids + [legacy]
     ids = list(dict.fromkeys(ids))  # dedupe, keep order
+    print("purge: reading %s - %d tracked message id(s)" % (STATE_FILE, len(ids)))
     survivors = []
-    if ids:
-        for mid in ids:
-            try:
-                req = urllib.request.Request(url + "/messages/" + mid, method="DELETE")
-                with urllib.request.urlopen(req, timeout=15):
-                    pass
-            except urllib.error.HTTPError as exc:
-                if exc.code not in (204, 404):
-                    survivors.append(mid)
-            except Exception:
+    deleted = 0
+    gone = 0
+    for mid in ids:
+        try:
+            req = urllib.request.Request(url + "/messages/" + mid, method="DELETE")
+            with urllib.request.urlopen(req, timeout=15):
+                pass
+            deleted += 1
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                gone += 1  # already gone, counts as cleared
+            else:
                 survivors.append(mid)
+        except Exception:
+            survivors.append(mid)
     with open(os.path.join(TMP, "survivor-ids.json"), "w", encoding="utf-8") as f:
         json.dump(survivors, f)
-    print("purged %d message(s), %d still pending" % (len(ids) - len(survivors), len(survivors)))
+    print("purge: %d deleted, %d already gone, %d failed, %d survivor id(s) kept for retry"
+          % (deleted, gone, len(survivors), len(survivors)))
 
 
 if __name__ == "__main__":
