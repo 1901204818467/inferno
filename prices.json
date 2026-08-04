@@ -1,12 +1,1 @@
-{
- "date": "2026-08-05",
- "crude": "free",
- "coal": "8K",
- "distillate": "14K",
- "fuel_block": "60.6K",
- "fuel_bill": "5.33M",
- "income_sell": "13.96M/day",
- "income_order": "15.08M/day",
- "net_buy_order": "10.09M/day",
- "net_instabuy": "8.63M/day"
-}
+{"date":"-","crude":"free","coal":"-","distillate":"-","fuel_block":"-","fuel_bill":"-","income_sell":"-","income_order":"-","net_buy_order":"-","net_instabuy":"-"}
