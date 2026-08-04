@@ -5,10 +5,10 @@
   interesting facts (all sourced from Wikipedia content). The animal's
   picture is fetched live from the keyless Wikipedia summary API, so the
   image changes with the animal while the fact is guaranteed good.
-- Prices: Hypixel Bazaar instant prices (no API key). Sulphuric Coal is
-  shown at instabuy. Gabagool Distillate and Inferno Fuel Block show both
-  the buy-order price and the instabuy price. Crude Gabagool is unpriced.
-  The total uses instabuy prices.
+- Prices: Hypixel Bazaar instant prices (no API key). Sulphuric Coal
+  shows instabuy and instasell. Gabagool Distillate and Inferno Fuel Block
+  show both the buy-order price and the instabuy price. Crude Gabagool is
+  free (the minions produce it). The total uses instabuy prices.
 
 Writes animal-name.txt, animal-fact.txt, animal-image.txt and
 shopping-list.txt into $RUNNER_TEMP. Never raises; every source has a
@@ -204,13 +204,19 @@ def fetch_prices():
     dist_bo, dist_ib = prices("CRUDE_GABAGOOL_DISTILLATE")
     fb_bo, fb_ib = prices("INFERNO_FUEL_BLOCK")
 
-    lines = ["675x Crude Gabagool"]
+    lines = ["675x Crude Gabagool - free (your minions make it)"]
     total = 0
     all_priced = True
 
-    if coal_ib > 0:
+    if coal_bo > 0 and coal_ib > 0:
         total += 25 * coal_ib
-        lines.append("25x Sulphuric Coal - %s" % fmt(25 * coal_ib))
+        if round(coal_bo) == round(coal_ib):
+            lines.append("25x Sulphuric Coal - %s" % fmt(coal_ib))
+        else:
+            lines.append(
+                "25x Sulphuric Coal - %s instabuy / %s instasell"
+                % (fmt(coal_ib), fmt(coal_bo))
+            )
     else:
         all_priced = False
         lines.append("25x Sulphuric Coal")
@@ -232,27 +238,32 @@ def fetch_prices():
         lines.append("50x Inferno Fuel Block")
 
     if all_priced and total > 0:
-        lines.append("Total - %s" % fmt(total))
+        lines.append("Total - %s (at instabuy)" % fmt(total))
 
     write_file("shopping-list.txt", "\n".join(lines))
     print("prices: coal=%s dist=%s/%s fb=%s/%s total=%s" % (
         fmt(coal_ib), fmt(dist_bo), fmt(dist_ib), fmt(fb_bo), fmt(fb_ib),
         fmt(total)))
 
-    # Daily profit. Income = the minions' crude + very crude gabagool sold at
-    # bazaar instasell (prices()[0] is the min side = instasell level), minus
-    # the 675 crude/day consumed by the fuel cores (it becomes fuel, it is not
-    # sold), taxed. Cost = the daily fuel bill (coal + distillate + fuel
-    # blocks) at buy-order and instabuy prices. Note: income reads ~20% below
-    # Herodirk's calculator because we use quick_status instasell rather than
-    # its volume-averaged sell prices.
-    crude_sell, _ = prices("CRUDE_GABAGOOL")
-    very_sell, _ = prices("VERY_CRUDE_GABAGOOL")
+    # Daily profit. Income = the minions' crude + very crude gabagool sold,
+    # minus the 675 crude/day consumed by the fuel cores (it becomes fuel, it
+    # is not sold), taxed. Shown at both instasell (min side of the book) and
+    # sell order (max side). Cost = the daily fuel bill (coal + distillate +
+    # fuel blocks) at buy-order and instabuy prices. Net is income at
+    # instasell minus each fuel mode. Note: income reads ~20% below Herodirk's
+    # calculator because we use quick_status instasell rather than its
+    # volume-averaged sell prices.
+    crude_sell, crude_order = prices("CRUDE_GABAGOOL")
+    very_sell, very_order = prices("VERY_CRUDE_GABAGOOL")
     if crude_sell > 0 and very_sell > 0 and all_priced:
         sold_crude = PROFIT["crude_per_day"] - PROFIT["crude_used_per_day"]
-        income = (
+        income_sell = (
             sold_crude * crude_sell
             + PROFIT["very_crude_per_day"] * very_sell
+        ) * (1.0 - PROFIT["sell_tax"])
+        income_order = (
+            sold_crude * crude_order
+            + PROFIT["very_crude_per_day"] * very_order
         ) * (1.0 - PROFIT["sell_tax"])
         cost_bo = (
             PROFIT["coal_per_day"] * coal_bo
@@ -264,15 +275,19 @@ def fetch_prices():
             + PROFIT["distillate_per_day"] * dist_ib
             + PROFIT["fuel_block_per_day"] * fb_ib
         )
-        net = income - cost_bo
+        net_bo = income_sell - cost_bo
+        net_ib = income_sell - cost_ib
         plines = [
-            "Income - %s (bazaar instasell)" % fmt(income),
+            "Income - %s instasell / %s sell order"
+            % (fmt(income_sell), fmt(income_order)),
             "Fuel - %s buy order / %s instabuy" % (fmt(cost_bo), fmt(cost_ib)),
-            "Net - %s/day (buy order refuel)" % fmt(net),
+            "Net - %s/day buy order / %s/day instabuy"
+            % (fmt(net_bo), fmt(net_ib)),
         ]
         write_file("profit.txt", "\n".join(plines))
-        print("profit: income=%s cost_bo=%s cost_ib=%s net=%s" % (
-            fmt(income), fmt(cost_bo), fmt(cost_ib), fmt(net)))
+        print("profit: income_sell=%s income_order=%s cost_bo=%s cost_ib=%s net_bo=%s net_ib=%s" % (
+            fmt(income_sell), fmt(income_order), fmt(cost_bo), fmt(cost_ib),
+            fmt(net_bo), fmt(net_ib)))
 
 
 def main():

@@ -41,7 +41,7 @@ jobs:
             animal_title=$(cat "$RUNNER_TEMP/animal-name.txt")
           fi
 
-          shop_list=$(printf '675x Crude Gabagool\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
+          shop_list=$(printf '675x Crude Gabagool - free (your minions make it)\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
           if [ -f "$RUNNER_TEMP/shopping-list.txt" ]; then
             shop_list=$(cat "$RUNNER_TEMP/shopping-list.txt")
           fi
@@ -51,26 +51,33 @@ jobs:
           if [ -f "$RUNNER_TEMP/profit.txt" ]; then
             profit_text=$(cat "$RUNNER_TEMP/profit.txt")
           fi
-          fields_json=$(jq -n --arg shop "$shop_list" --arg craft "$craft_steps" '[{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]')
-          if [ -n "$profit_text" ]; then
-            fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
-          fi
-          main_embed=$(jq -n \
-            --arg icon "https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410" \
-            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson fields "$fields_json" \
-            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: $fields}')
+          icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
+          animal_embed=""
           if [ -n "$fact" ]; then
             if [ -n "$image" ]; then
-              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
+              animal_embed=$(jq -n --arg icon "$icon" --arg ts "$ts" --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, description: $desc, timestamp: $ts, image: {url: $img}}')
             else
-              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" '{title: $title, description: $desc}')
+              animal_embed=$(jq -n --arg icon "$icon" --arg ts "$ts" --arg title "$animal_title" --arg desc "$fact" '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, description: $desc, timestamp: $ts}')
             fi
-            embeds=$(jq -n --argjson a "$main_embed" --argjson b "$animal_embed" '[$a, $b]')
-          else
-            embeds=$(jq -n --argjson a "$main_embed" '[$a]')
           fi
+          shopping_embed=$(jq -n --arg shop "$shop_list" '{color: 15158332, fields: [{name: "Shopping List", value: $shop}]}')
+          crafting_embed=$(jq -n --arg craft "$craft_steps" '{color: 3447003, fields: [{name: "Crafting", value: $craft}]}')
+          profit_embed=""
+          if [ -n "$profit_text" ]; then
+            profit_embed=$(jq -n --arg profit "$profit_text" '{color: 3066993, fields: [{name: "Daily Profit", value: $profit}]}')
+          fi
+
+          if [ -n "$animal_embed" ]; then
+            embeds="[$animal_embed, $shopping_embed, $crafting_embed"
+          else
+            embeds="[$shopping_embed, $crafting_embed"
+          fi
+          if [ -n "$profit_text" ]; then
+            embeds="$embeds, $profit_embed"
+          fi
+          embeds="$embeds]"
 
           payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + ">"), embeds: $embeds}')
 
