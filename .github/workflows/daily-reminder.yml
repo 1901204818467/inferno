@@ -64,7 +64,7 @@ jobs:
             if [ "$fetched_at" -gt 0 ] 2>/dev/null; then
               age=$(( $(date +%s) - fetched_at ))
               if [ "$age" -ge 0 ] && [ "$age" -lt 3600 ]; then
-                footer="$ts_human &#183; prices fetched ${age}s ago"
+                footer="$ts_human · prices fetched ${age}s ago"
               fi
             fi
           fi

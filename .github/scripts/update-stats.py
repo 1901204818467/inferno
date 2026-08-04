@@ -41,37 +41,43 @@ def main():
 
     dbo = int(day.get("net_bo") or 0)
     dib = int(day.get("net_ib") or 0)
+    today = day.get("date", "")
 
-    stats["refuels"] = stats.get("refuels", 0) + 1
-    stats["fuel_blocks"] = stats.get("fuel_blocks", 0) + 50
-    stats["total_net_bo"] = stats.get("total_net_bo", 0) + dbo
-    stats["total_net_ib"] = stats.get("total_net_ib", 0) + dib
-    stats["total_income_sell"] = (
-        stats.get("total_income_sell", 0)
-        + int(day.get("income_sell") or 0)
-    )
-    stats["total_income_order"] = (
-        stats.get("total_income_order", 0)
-        + int(day.get("income_order") or 0)
-    )
-    stats["total_spent_bo"] = (
-        stats.get("total_spent_bo", 0) + int(day.get("spent_bo") or 0)
-    )
-    stats["total_spent_ib"] = (
-        stats.get("total_spent_ib", 0) + int(day.get("spent_ib") or 0)
-    )
+    # only count the first run of each calendar day to avoid
+    # inflating stats when testing or re-running the workflow
+    if today and stats.get("last_day") == today:
+        print("stats: same day (%s), skipping accumulation" % today)
+    else:
+        stats["refuels"] = stats.get("refuels", 0) + 1
+        stats["fuel_blocks"] = stats.get("fuel_blocks", 0) + 50
+        stats["total_net_bo"] = stats.get("total_net_bo", 0) + dbo
+        stats["total_net_ib"] = stats.get("total_net_ib", 0) + dib
+        stats["total_income_sell"] = (
+            stats.get("total_income_sell", 0)
+            + int(day.get("income_sell") or 0)
+        )
+        stats["total_income_order"] = (
+            stats.get("total_income_order", 0)
+            + int(day.get("income_order") or 0)
+        )
+        stats["total_spent_bo"] = (
+            stats.get("total_spent_bo", 0) + int(day.get("spent_bo") or 0)
+        )
+        stats["total_spent_ib"] = (
+            stats.get("total_spent_ib", 0) + int(day.get("spent_ib") or 0)
+        )
 
-    if not stats.get("first_day") and day.get("date"):
-        stats["first_day"] = day["date"]
-    if day.get("date"):
-        stats["last_day"] = day["date"]
+        if not stats.get("first_day") and today:
+            stats["first_day"] = today
+        if today:
+            stats["last_day"] = today
 
-    if dbo > stats.get("best_day_net_bo", 0):
-        stats["best_day_net_bo"] = dbo
-        stats["best_day_date_bo"] = day.get("date", "")
-    if dib > stats.get("best_day_net_ib", 0):
-        stats["best_day_net_ib"] = dib
-        stats["best_day_date_ib"] = day.get("date", "")
+        if dbo > stats.get("best_day_net_bo", 0):
+            stats["best_day_net_bo"] = dbo
+            stats["best_day_date_bo"] = day.get("date", "")
+        if dib > stats.get("best_day_net_ib", 0):
+            stats["best_day_net_ib"] = dib
+            stats["best_day_date_ib"] = day.get("date", "")
 
     r = stats["refuels"]
     stats["avg_net_bo"] = stats["total_net_bo"] // r if r else 0

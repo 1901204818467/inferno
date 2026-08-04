@@ -529,11 +529,17 @@ def fetch_prices():
             m = re.search(r"(\d+)%", stock)
             if m:
                 stock_pct = int(m.group(1))
+        # opportunity cost of the 675 crude burned for fuel cores
+        # (not shown in the reminder, purely for data tracking)
+        crude_cost_sell = int(PROFIT["crude_used_per_day"] * crude_sell * (1.0 - PROFIT["sell_tax"]))
+        crude_cost_order = int(PROFIT["crude_used_per_day"] * crude_order * (1.0 - PROFIT["sell_tax"]))
         write_file("stats-day.json", json.dumps({
             "date": day,
             "net_bo": int(net_bo), "net_ib": int(net_ib),
             "income_sell": int(income_sell), "income_order": int(income_order),
             "spent_bo": int(cost_bo), "spent_ib": int(cost_ib),
+            "crude_cost_sell": crude_cost_sell,
+            "crude_cost_order": crude_cost_order,
             "spike_fired": bool(spike), "spike_items": spike or None,
             "stockup_fired": bool(stock), "stockup_pct": stock_pct,
             "craftbuy_fired": bool(tip),
@@ -568,6 +574,7 @@ def fetch_prices():
             "fb_subtotal": fb_sub,
             "bill_bo": int(cost_bo), "bill_ib": int(cost_ib),
             "income_sell": int(income_sell), "income_order": int(income_order),
+            "crude_cost_sell": crude_cost_sell, "crude_cost_order": crude_cost_order,
             "net_bo": int(net_bo), "net_ib": int(net_ib),
             "spike_items": spike or None,
             "stockup_fired": bool(stock), "stockup_pct": stock_pct,
