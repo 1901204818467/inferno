@@ -23,29 +23,35 @@ jobs:
             echo "no stored message, nothing to do"
             exit 0
           fi
-          message_id=$(jq -r '.message_id // empty' .github/reminder-state.json || true)
           sent_at=$(jq -r '.sent_at // 0' .github/reminder-state.json || true)
-          if [ -z "$message_id" ] || [ -z "$sent_at" ] || [ "$sent_at" = "0" ]; then
-            echo "state file contains no message"
-            exit 0
-          fi
           case "$sent_at" in
             *[!0-9]*)
               echo "invalid sent_at in state file"
               exit 0
               ;;
           esac
+          if [ -z "$sent_at" ] || [ "$sent_at" = "0" ]; then
+            echo "state file contains no message"
+            exit 0
+          fi
           now=$(date +%s)
           if [ $((now - sent_at)) -lt 10800 ]; then
             echo "reminder message is not 3 hours old yet, skipping"
             exit 0
           fi
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -X DELETE "${WEBHOOK_URL}/messages/${message_id}" || true)
-          if [ "$code" != "204" ] && [ "$code" != "404" ]; then
-            echo "delete request failed (http $code), keeping state for a later attempt"
-            exit 0
+
+          python3 .github/scripts/purge-messages.py || echo "purge failed"
+          if [ -f "$RUNNER_TEMP/survivor-ids.json" ]; then
+            kept=$(cat "$RUNNER_TEMP/survivor-ids.json")
+            if [ "$kept" = "[]" ]; then
+              printf '{"ids":[],"sent_at":0}\n' > .github/reminder-state.json
+            else
+              printf '{"ids":%s,"sent_at":%s}\n' "$kept" "$sent_at" > .github/reminder-state.json
+            fi
+          else
+            echo "purge did not complete, keeping state for a later attempt"
           fi
-          rm -f .github/reminder-state.json
+
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add .github/reminder-state.json

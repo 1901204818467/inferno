@@ -18,14 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Delete previous reminder message
+      - name: Purge all previous reminder messages
         run: |
-          if [ -f .github/reminder-state.json ]; then
-            prev_id=$(jq -r '.message_id // empty' .github/reminder-state.json || true)
-            if [ -n "$prev_id" ]; then
-              curl -s --max-time 15 -X DELETE "${WEBHOOK_URL}/messages/${prev_id}" > /dev/null || true
-            fi
-          fi
+          python3 .github/scripts/purge-messages.py || echo "purge failed, will retry on next run"
 
       - name: Fetch animal fact, prices, and shopping list
         run: |
@@ -52,15 +47,26 @@ jobs:
           fi
           craft_steps=$(printf '/recipe gabagool\n1. 25x fuel gabagool supercraft\n2. 25x rare inferno minion fuel supercraft')
 
+          profit_text=""
+          if [ -f "$RUNNER_TEMP/profit.txt" ]; then
+            profit_text=$(cat "$RUNNER_TEMP/profit.txt")
+          fi
+          fields_json=$(jq -n --arg shop "$shop_list" --arg craft "$craft_steps" '[{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]')
+          if [ -n "$profit_text" ]; then
+            fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
+          fi
           main_embed=$(jq -n \
             --arg icon "https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410" \
             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg shop "$shop_list" \
-            --arg craft "$craft_steps" \
-            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: [{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]}')
+            --argjson fields "$fields_json" \
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: $fields}')
 
-          if [ -n "$fact" ] && [ -n "$image" ]; then
-            animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
+          if [ -n "$fact" ]; then
+            if [ -n "$image" ]; then
+              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
+            else
+              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" '{title: $title, description: $desc}')
+            fi
             embeds=$(jq -n --argjson a "$main_embed" --argjson b "$animal_embed" '[$a, $b]')
           else
             embeds=$(jq -n --argjson a "$main_embed" '[$a]')
@@ -75,7 +81,12 @@ jobs:
             exit 1
           fi
 
-          printf '{"message_id":"%s","sent_at":%s}\n' "$message_id" "$(date +%s)" > .github/reminder-state.json
+          kept='[]'
+          if [ -f "$RUNNER_TEMP/survivor-ids.json" ]; then
+            kept=$(cat "$RUNNER_TEMP/survivor-ids.json")
+          fi
+          new_ids=$(jq -n --arg new "$message_id" --argjson kept "$kept" '$kept[-49:] + [$new]')
+          printf '{"ids":%s,"sent_at":%s}\n' "$new_ids" "$(date +%s)" > .github/reminder-state.json
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"
