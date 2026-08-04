@@ -4,7 +4,7 @@ concurrency:
   cancel-in-progress: true
 on:
   schedule:
-    - cron: '30 21 * * *'
+    - cron: '45 21 * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -55,8 +55,6 @@ jobs:
           fi
           icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
 
-          # freshness stamp: combined with the 'sent at' time so it sits in
-          # the footer right where Discord's timestamp would have been
           ts_human=$(date -u "+%d %b %H:%M UTC")
           footer="$ts_human"
           if [ -f "$RUNNER_TEMP/prices-fetched-at.txt" ]; then
@@ -107,15 +105,13 @@ jobs:
           printf '{"ids":%s,"sent_at":%s}\n' "$new_ids" "$(date +%s)" > .github/reminder-state.json
           echo "new state: $(cat .github/reminder-state.json)"
 
-          # lifetime stats accumulated by a standalone script (no YAML
-          # heredoc that can lose Python indentation on deploy)
           python3 .github/scripts/update-stats.py
+
+          python3 .github/scripts/generate-chart.py
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          # use -A so files created this run (prices.jsonl first time) are
-          # added even if they start untracked
-          git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json
+          git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
           if git diff --cached --quiet HEAD; then
             echo "no changes to commit"
           else

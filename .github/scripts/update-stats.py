@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Merge today's stats snapshot into the lifetime stats file.
 
 Reads stats-day.json from $RUNNER_TEMP (written by fetch-data.py) and
@@ -30,21 +29,19 @@ def main():
         with open(day_path, encoding="utf-8") as f:
             day = json.load(f)
     except FileNotFoundError:
-        pass  # no stats-day.json yet (profit data unavailable this run)
+        pass
 
     stats = {}
     try:
         with open("stats.json", encoding="utf-8") as f:
             stats = json.load(f)
     except FileNotFoundError:
-        pass  # fresh start, no stats file yet
+        pass
 
     dbo = int(day.get("net_bo") or 0)
     dib = int(day.get("net_ib") or 0)
     today = day.get("date", "")
 
-    # only count the first run of each calendar day to avoid
-    # inflating stats when testing or re-running the workflow
     if today and stats.get("last_day") == today:
         print("stats: same day (%s), skipping accumulation" % today)
     else:
@@ -94,3 +91,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

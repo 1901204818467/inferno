@@ -2,6 +2,8 @@
 
 a discord webhook that pings you daily to refuel your inferno minions on hypixel skyblock. free, runs on github actions.
 
+![net chart](chart.svg)
+
 ![reminder status](https://github.com/1901204818467/inferno/actions/workflows/daily-reminder.yml/badge.svg)
 ![fuel bill](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2F1901204818467%2Finferno%2Fmain%2Fprices.json&query=fuel_bill&label=fuel%20bill&color=orange)
 ![net](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2F1901204818467%2Finferno%2Fmain%2Fprices.json&query=net_buy_order&label=net%2Fday&color=green)

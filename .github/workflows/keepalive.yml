@@ -3,8 +3,8 @@ permissions:
   contents: write
 on:
   schedule:
-    - cron: '0 0 1 * *'   # once a month
-  workflow_dispatch:        # <- add this line
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
 jobs:
   keepalive:
     runs-on: ubuntu-latest

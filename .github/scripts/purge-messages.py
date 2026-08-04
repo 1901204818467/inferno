@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Delete every message this webhook has previously sent.
 
 Reads the id history from .github/reminder-state.json (supports both the
@@ -25,8 +24,6 @@ TMP = os.environ.get("RUNNER_TEMP", "/tmp")
 def main():
     url = os.environ.get("WEBHOOK_URL", "").strip()
     if not url:
-        # No webhook URL -> nothing was purged, so no survivors file is
-        # written and the caller keeps the state untouched.
         print("purge: no WEBHOOK_URL set, nothing to purge")
         return
     try:
@@ -38,7 +35,7 @@ def main():
     legacy = state.get("message_id")
     if legacy:
         ids = ids + [legacy]
-    ids = list(dict.fromkeys(ids))  # dedupe, keep order
+    ids = list(dict.fromkeys(ids))
     print("purge: reading %s - %d tracked message id(s)" % (STATE_FILE, len(ids)))
     survivors = []
     deleted = 0
@@ -51,7 +48,7 @@ def main():
             deleted += 1
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
-                gone += 1  # already gone, counts as cleared
+                gone += 1
             else:
                 survivors.append(mid)
         except Exception:
@@ -64,3 +61,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

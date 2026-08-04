@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Fetch the data for the Inferno reminder embed.
 
 - Animal: pick a random entry from a hand-curated pool of verified
@@ -43,29 +42,22 @@ import urllib.request
 UA = {"User-Agent": "inferno-reminder/1.0 (GitHub Actions daily reminder)"}
 TMP = os.environ.get("RUNNER_TEMP", "/tmp")
 COFL = "https://sky.coflnet.com/api/bazaar"
-MIN_PCT = 10.0   # % from the weekly median before an item can alert
-MAD_MULT = 3.0   # outlier cutoff: 3x the median absolute deviation
-THIN_UNITS = 25  # top-3 ask units below which the order book is 'thin'
-GABAGOOL = "FUEL_GABAGOOL"   # buyable fuel intermediate (finished fuel has no market)
-BUY_CHEAP_PCT = 5.0           # buy-vs-craft must beat crafting by this % to tip
+MIN_PCT = 10.0
+MAD_MULT = 3.0
+THIN_UNITS = 25
+GABAGOOL = "FUEL_GABAGOOL"
+BUY_CHEAP_PCT = 5.0
 
-# Profit model constants, from Herodirk's Minion Calculator for this exact
-# setup (25x Inferno T3, Fuel Gabagool grade, Gabagool Distillate, SC3000,
-# Minion Expander, Beacon V + Scorched Power Crystal, Postcard, Force
-# Rising Celsius, offline). Re-run the calculator to refresh these if the
-# layout ever changes.
 PROFIT = {
-    "crude_per_day": 4030.66,      # raw crude after per-minion SC3000 compacting
-    "very_crude_per_day": 175,     # SC3000-compacted stacks (192 crude each)
-    "crude_used_per_day": 675,     # 25 Fuel Gabagool cores x 27 crude - deducted
-    "coal_per_day": 25,            # one Inferno Minion Fuel per minion, 24h each
-    "distillate_per_day": 150,     # 6 Gabagool Distillate per fuel
-    "fuel_block_per_day": 50,      # 2 Inferno Fuel Blocks per fuel
-    "sell_tax": 0.01125,           # bazaar tax, flipper 1 (1.25% - 0.125%), mayor none
+    "crude_per_day": 4030.66,
+    "very_crude_per_day": 175,
+    "crude_used_per_day": 675,
+    "coal_per_day": 25,
+    "distillate_per_day": 150,
+    "fuel_block_per_day": 50,
+    "sell_tax": 0.01125,
 }
 
-# (animal title for the Wikipedia picture, verified interesting fact).
-# All facts are one short sentence, no emojis, sourced from Wikipedia.
 FACTS = [
     ("Octopus", "Octopuses have three hearts, blue blood, and can change colour and shape to blend into almost any surface."),
     ("Axolotl", "Axolotls can regenerate lost limbs, organs, and even parts of their brain - and never grow out of their larval stage."),
@@ -182,8 +174,6 @@ def fetch_animal():
     entries = list(FACTS)
     random.shuffle(entries)
     facts_by_name = dict(entries)
-    # The fact itself never depends on the network; only the picture does.
-    # Find the first entry with a working picture and write it all at once.
     for animal, _ in entries[:10]:
         try:
             s = get(
@@ -200,7 +190,6 @@ def fetch_animal():
         write_file("animal-image.txt", thumb)
         print("animal:", animal)
         return
-    # No picture available - still send the fact (embed shows text only).
     title, fact = entries[0]
     write_file("animal-name.txt", title)
     write_file("animal-fact.txt", fact)
@@ -344,7 +333,7 @@ def craft_buy_tip(gab_bo, coal_ib, gab_vol):
     """
     if gab_bo <= 0 or coal_ib <= 0:
         return ""
-    if gab_vol < 25 * 7:  # less than a week's worth of supply on the market
+    if gab_vol < 25 * 7:
         return ""
     craft = coal_ib
     if gab_bo <= craft * (1.0 - BUY_CHEAP_PCT / 100.0):
@@ -361,13 +350,11 @@ def fetch_prices():
         products = (bz or {}).get("products") or {}
         last = (bz or {}).get("lastUpdated") or 0
         if last:
-            ms = last if last > 10 ** 11 else last * 1000.0  # epoch ms or s
+            ms = last if last > 10 ** 11 else last * 1000.0
             bazaar_age = max(0.0, (time.time() * 1000 - ms) / 1000.0)
             print("bazaar snapshot age: %.0fs (fetched live this run)" % bazaar_age)
     except Exception:
         pass
-    # timestamp for the embed footer: exactly when the bazaar data was
-    # pulled regardless of whether the profit block can compute income.
     write_file("prices-fetched-at.txt", str(int(time.time())))
 
     def prices(tag):
@@ -454,14 +441,6 @@ def fetch_prices():
         fmt(coal_ib), fmt(dist_bo), fmt(dist_ib), fmt(fb_bo), fmt(fb_ib),
         fmt(total)))
 
-    # Daily profit. Income = the minions' crude + very crude gabagool sold,
-    # minus the 675 crude/day consumed by the fuel cores (it becomes fuel, it
-    # is not sold), taxed. Shown at both instasell (min side of the book) and
-    # sell order (max side). Cost = the daily fuel bill (coal + distillate +
-    # fuel blocks) at buy-order and instabuy prices. Net is income at
-    # instasell minus each fuel mode. Note: income reads ~20% below Herodirk's
-    # calculator because we use quick_status instasell rather than its
-    # volume-averaged sell prices.
     crude_sell, crude_order = prices("CRUDE_GABAGOOL")
     very_sell, very_order = prices("VERY_CRUDE_GABAGOOL")
     cost_bo = cost_ib = 0.0
@@ -476,8 +455,6 @@ def fetch_prices():
             + PROFIT["distillate_per_day"] * dist_ib
             + PROFIT["fuel_block_per_day"] * fb_ib
         )
-    # 7-day instabuy history, fetched once and shared by the spike alert
-    # and the stock-up signal (3 Coflnet calls, ~1/sec as they ask).
     weeks = {}
     for i, tag in enumerate(("SULPHURIC_COAL", "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK")):
         if i:
@@ -520,7 +497,6 @@ def fetch_prices():
         dist_sub = int(PROFIT["distillate_per_day"] * dist_ib)
         fb_sub = int(PROFIT["fuel_block_per_day"] * fb_ib)
         stock_pct = None
-        # parse per-item spike percentages for structured log 
         spike_pct_map = {}
         if spike:
             for m in re.finditer(r"(\w[\w\s]*?)\s+([+-]?\d+)%", spike):
@@ -529,8 +505,6 @@ def fetch_prices():
             m = re.search(r"(\d+)%", stock)
             if m:
                 stock_pct = int(m.group(1))
-        # opportunity cost of the 675 crude burned for fuel cores
-        # (not shown in the reminder, purely for data tracking)
         crude_cost_sell = int(PROFIT["crude_used_per_day"] * crude_sell * (1.0 - PROFIT["sell_tax"]))
         crude_cost_order = int(PROFIT["crude_used_per_day"] * crude_order * (1.0 - PROFIT["sell_tax"]))
         write_file("stats-day.json", json.dumps({
@@ -598,7 +572,6 @@ def fetch_prices():
             fmt(income_sell), fmt(income_order), fmt(cost_bo), fmt(cost_ib),
             fmt(net_bo), fmt(net_ib), " | ".join(extras) or "-"))
     elif extras:
-        # No profit data this run, but an alert is still worth seeing.
         write_file("profit.txt", "\n".join(extras))
         print("profit: unavailable, extras=%s" % " | ".join(extras))
 
@@ -610,3 +583,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
