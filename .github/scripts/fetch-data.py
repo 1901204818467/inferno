@@ -58,70 +58,64 @@ PROFIT = {
     "sell_tax": 0.01125,
 }
 
-FACTS = [
+FALLBACK_FACTS = [
     ("Octopus", "Octopuses have three hearts, blue blood, and can change colour and shape to blend into almost any surface."),
     ("Axolotl", "Axolotls can regenerate lost limbs, organs, and even parts of their brain - and never grow out of their larval stage."),
-    ("Platypus", "The platypus is one of the few mammals that lays eggs, and males have venomous spurs on their hind legs."),
     ("Tardigrade", "Tardigrades can survive boiling water, deep space, and decades without food or water."),
-    ("Pistol shrimp", "The pistol shrimp snaps its claw so fast the collapsing bubble fires a shockwave almost as hot as the surface of the sun."),
     ("Mantis shrimp", "Mantis shrimp see four times more colours than humans and punch with the force of a bullet."),
-    ("Archerfish", "Archerfish knock insects off branches by shooting jets of water from their mouths, up to 2 metres away."),
     ("Naked mole-rat", "Naked mole-rats barely feel pain, rarely get cancer, and can live past 30 - far longer than any other rodent."),
-    ("Sloth", "Sloths can hold their breath for up to 40 minutes and only climb down from the trees about once a week."),
     ("Wombat", "Wombats are the only animals in the world that produce cube-shaped droppings."),
-    ("Horned lizard", "Horned lizards scare off predators by squirting a stream of blood from their eyes."),
     ("Wood frog", "Wood frogs freeze solid in winter - hearts stop, breathing stops - and thaw out alive in spring."),
     ("Honey badger", "Honey badgers fear nothing: they take on lions and snakes and shrug off most snake venom."),
     ("Cheetah", "A cheetah can reach 100 km/h in about three seconds - faster off the line than most sports cars."),
     ("Peregrine falcon", "Peregrine falcons are the fastest animals on Earth, hitting over 300 km/h in a dive."),
-    ("Hummingbird", "Hummingbirds are the only birds that can fly backwards, beating their wings up to 80 times a second."),
     ("Emperor penguin", "Emperor penguins are the only penguins that breed through the Antarctic winter, in temperatures down to -60 C."),
     ("Giraffe", "Giraffes have the same number of neck bones as humans, and a heart big enough to pump blood 2 metres up to the brain."),
     ("Kangaroo", "Female kangaroos can pause a pregnancy until the joey already in the pouch is ready to leave."),
-    ("Koala", "Koala joeys eat their mother's droppings to get the bacteria they need to digest eucalyptus leaves."),
     ("Fennec fox", "Fennec foxes use their giant ears as radiators to keep cool in the desert."),
-    ("Arctic fox", "Arctic foxes change colour with the seasons - white in winter, brown in summer."),
     ("Polar bear", "A polar bear's skin is black and its fur is actually transparent - it only looks white."),
     ("Elephant", "Elephants pick up vibrations through their feet and can 'hear' other elephants from kilometres away."),
     ("Hippopotamus", "Hippos can't swim or float - they walk along the bottom of rivers and can hold their breath for five minutes."),
-    ("Rhinoceros", "Rhino horns are made of keratin, the same protein as human hair and fingernails."),
-    ("Lion", "A lion's roar can be heard up to 8 km away, and lionesses do most of the hunting."),
     ("Sperm whale", "Sperm whales dive over 2 km deep and can hold their breath for over an hour."),
     ("Narwhal", "The narwhal's 'horn' is actually a tooth that can grow up to 3 metres long."),
-    ("Beluga whale", "Belugas are so vocal they're called the canaries of the sea - they can even imitate human speech."),
     ("Great white shark", "Great white sharks can smell a single drop of blood in 100 litres of water."),
-    ("Goblin shark", "Goblin sharks shoot their jaws out of their faces to grab prey."),
     ("Hagfish", "Hagfish flood predators with litres of instant slime that clogs their gills."),
-    ("Sea cucumber", "Sea cucumbers eject their own internal organs at predators, then grow them back."),
-    ("Sea star", "Sea stars can regrow lost arms, and some can grow a whole new body from a single arm."),
-    ("Pufferfish", "Pufferfish puff into spiky balls when threatened, and most carry a poison deadlier than cyanide."),
     ("Cuttlefish", "Cuttlefish change colour and texture in a blink, and have three hearts and blue-green blood."),
-    ("Vampire squid", "Vampire squids live in the darkest, most oxygen-starved parts of the ocean."),
     ("Giant squid", "Giant squids have the largest eyes of any animal - about the size of dinner plates."),
-    ("Firefly", "Fireflies make light with a chemical reaction, and some species flash in perfect synchrony."),
     ("Bombardier beetle", "Bombardier beetles blast predators with a boiling-hot chemical spray from their abdomens."),
     ("Dung beetle", "Dung beetles roll dung balls far heavier than themselves, and some navigate by the Milky Way."),
     ("Leafcutter ant", "Leafcutter ants don't eat the leaves they cut - they use them to grow a fungus garden, which they eat."),
-    ("Praying mantis", "Female praying mantises sometimes eat their mates right after mating."),
-    ("Black widow spider", "Black widow venom is up to 15 times stronger than rattlesnake venom."),
     ("Scorpion", "Scorpions glow blue-green under ultraviolet light."),
     ("Komodo dragon", "Komodo dragons have a venomous bite and can take down prey as large as water buffalo."),
     ("Chameleon", "Chameleons move each eye independently and can catch prey with their tongue in a fraction of a second."),
-    ("Tuatara", "Tuatara have a 'third eye' on top of their heads that senses light."),
-    ("Kiwi", "Kiwi lay an egg up to a quarter of their own body weight - the biggest egg-to-body ratio of any bird."),
-    ("Ostrich", "Ostriches can't fly but sprint at over 70 km/h, and their eyes are bigger than their brains."),
-    ("Wandering albatross", "Wandering albatrosses can fly thousands of kilometres without flapping their wings once."),
-    ("Snowy owl", "Snowy owls can turn their heads almost 270 degrees and hunt in total daylight."),
     ("Capybara", "Capybaras are the biggest rodents on Earth, weighing up to 66 kg, and are excellent swimmers."),
     ("Sea otter", "Sea otters hold hands while sleeping so they don't drift apart, and use rocks as tools."),
     ("Honey bee", "Honey bees tell hive-mates exactly where flowers are with a 'waggle dance'."),
-    ("Cicada", "Some cicadas live 17 years underground as nymphs, then surface en masse for a few weeks."),
     ("Ocean sunfish", "Ocean sunfish can lay up to 300 million eggs at once - more than any other vertebrate."),
     ("Horseshoe crab", "Horseshoe crabs have blue blood that medicine uses to test vaccines for contamination."),
-    ("Portuguese man o' war", "The Portuguese man o' war looks like a jellyfish but is actually four organisms working as one colony."),
     ("Pangolin", "Pangolins are the only mammals covered in scales, and roll into an armoured ball when threatened."),
     ("Aye-aye", "Aye-ayes tap on wood with a long skinny finger to find grubs, then hook them out - nature's woodpecker."),
 ]
+
+STOP_WORDS = {
+    "a", "an", "the", "is", "was", "are", "were", "be", "been",
+    "of", "in", "on", "at", "to", "for", "with", "by", "from",
+    "about", "that", "this", "it", "its", "all", "has", "have",
+    "had", "can", "not", "than", "or", "as", "if", "but", "so",
+    "no", "more", "most", "some", "any", "each", "every", "both",
+    "few", "many", "much", "such", "only", "other", "new", "old",
+    "first", "last", "long", "great", "little", "own", "same",
+    "right", "still", "just", "too", "very", "also", "even",
+    "then", "now", "here", "there", "when", "where", "why",
+    "how", "which", "who", "whom", "whose", "what",
+    "one", "two", "three", "four", "five", "six", "seven",
+    "will", "would", "could", "should", "may", "might", "must",
+    "into", "over", "after", "before", "between", "under",
+    "again", "then", "once", "during", "above", "below",
+    "up", "down", "out", "off", "away", "back",
+}
+
+WIKI = "https://en.wikipedia.org/api/rest_v1/page/summary/"
 
 
 def get(url, timeout=20, tries=2):
@@ -170,30 +164,98 @@ def repo_append(name, text):
         f.write(text)
 
 
-def fetch_animal():
-    entries = list(FACTS)
+def wiki_image(title):
+    """Return (display_title, thumbnail_url) from Wikipedia, or (None, None)."""
+    try:
+        s = get(WIKI + urllib.parse.quote(title), timeout=15)
+    except Exception:
+        return None, None
+    thumb = (s.get("thumbnail") or {}).get("source") or ""
+    if not thumb:
+        return None, None
+    return s.get("title") or title, thumb
+
+
+def find_image_for_fact(fact_text):
+    """Try to find a Wikipedia image related to the fact text.
+
+    Extracts candidate keywords (longest non-stop-word, capitalized words
+    preferred), tries each against the Wikipedia summary API until one
+    returns a thumbnail. Returns (title, url) or (None, None).
+    """
+    words = re.findall(r"[A-Za-z]{4,}", fact_text)
+    if not words:
+        return None, None
+    scored = []
+    for w in words:
+        lower = w.lower()
+        if lower in STOP_WORDS:
+            continue
+        score = len(w)
+        if w[0].isupper() and w != w.upper():
+            score += 10
+        scored.append((score, w))
+    scored.sort(reverse=True)
+    candidates = [w for _, w in scored[:5]]
+    for term in candidates[:3]:
+        title, thumb = wiki_image(term)
+        if thumb:
+            return title, thumb
+    return None, None
+
+
+def fetch_fallback_fact():
+    entries = list(FALLBACK_FACTS)
     random.shuffle(entries)
-    facts_by_name = dict(entries)
-    for animal, _ in entries[:10]:
-        try:
-            s = get(
-                "https://en.wikipedia.org/api/rest_v1/page/summary/"
-                + urllib.parse.quote(animal)
-            )
-        except Exception:
-            continue
-        thumb = (s.get("thumbnail") or {}).get("source") or ""
-        if not thumb:
-            continue
-        write_file("animal-name.txt", animal)
-        write_file("animal-fact.txt", facts_by_name[animal])
-        write_file("animal-image.txt", thumb)
-        print("animal:", animal)
-        return
+    for animal, fact in entries[:8]:
+        title, thumb = wiki_image(animal)
+        if thumb:
+            write_file("animal-name.txt", title)
+            write_file("animal-fact.txt", fact)
+            write_file("animal-image.txt", thumb)
+            print("fact: fallback animal=%s" % animal)
+            return
     title, fact = entries[0]
     write_file("animal-name.txt", title)
     write_file("animal-fact.txt", fact)
-    print("animal: %s (no image available)" % title)
+    print("fact: fallback animal=%s (no image)" % title)
+
+
+def fetch_fact():
+    if random.random() < 0.5:
+        try:
+            r = get("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", timeout=15)
+            fact = (r or {}).get("text", "").strip()
+            if fact:
+                write_file("animal-fact.txt", fact)
+                title, thumb = find_image_for_fact(fact)
+                if thumb:
+                    write_file("animal-name.txt", title)
+                    write_file("animal-image.txt", thumb)
+                    print("fact: uselessfacts \"%s\" -> image=%s" % (fact[:60], title))
+                else:
+                    write_file("animal-name.txt", "Random Fact")
+                    print("fact: uselessfacts \"%s\" (no image)" % fact[:60])
+                return
+        except Exception:
+            pass
+    else:
+        try:
+            r = get("https://catfact.ninja/fact", timeout=15)
+            fact = (r or {}).get("fact", "").strip()
+            if fact:
+                write_file("animal-fact.txt", fact)
+                title, thumb = wiki_image("Cat")
+                if thumb:
+                    write_file("animal-name.txt", title)
+                    write_file("animal-image.txt", thumb)
+                else:
+                    write_file("animal-name.txt", "Cat Fact")
+                print("fact: catfact \"%s\"" % fact[:60])
+                return
+        except Exception:
+            pass
+    fetch_fallback_fact()
 
 
 def cofl_week_buy(tag):
@@ -577,7 +639,7 @@ def fetch_prices():
 
 
 def main():
-    fetch_animal()
+    fetch_fact()
     fetch_prices()
 
 
