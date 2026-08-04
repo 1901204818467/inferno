@@ -27,7 +27,10 @@ def main():
     try:
         with open(os.path.join(tmp, "stats-day.json"), encoding="utf-8") as f:
             day = json.load(f)
+        os.remove(os.path.join(tmp, "stats-day.json"))
     except FileNotFoundError:
+        pass
+    except OSError:
         pass
 
     stats = {}

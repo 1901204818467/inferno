@@ -96,6 +96,16 @@ def main():
 
     coords = " ".join("%.1f,%.1f" % (x(i), y(v)) for i, (_, v) in enumerate(pts))
 
+    window = 7
+    ma = []
+    run = 0.0
+    for i in range(len(pts)):
+        run += pts[i][1]
+        if i >= window:
+            run -= pts[i - window][1]
+        ma.append(run / min(i + 1, window))
+    ma_coords = " ".join("%.1f,%.1f" % (x(i), y(ma[i])) for i in range(len(ma)))
+
     area_coords = (
         "%.1f,%.1f " % (x(0), PAD_T + plot_h)
         + coords
@@ -136,6 +146,9 @@ def main():
         '<polyline points="%s" fill="none" stroke="%s"'
         ' stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
         % (coords, COLOR_LINE),
+        '<polyline points="%s" fill="none" stroke="#0969da"'
+        ' stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>'
+        % ma_coords,
         *[
             '<text x="%d" y="%.1f" text-anchor="end"'
             ' font-family="%s" font-size="11" fill="%s"'
@@ -159,6 +172,11 @@ def main():
             COLOR_LINE,
             fmt_axis(values[-1]) + "/day",
         ),
+        '<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#0969da"'
+        ' stroke-width="2" stroke-dasharray="5 4"/>'
+        % (W - PAD_R - 88, 18, W - PAD_R - 66, 18),
+        '<text x="%d" y="22" font-family="%s" font-size="11" fill="%s">7d avg</text>'
+        % (W - PAD_R - 60, FONT, COLOR_TEXT),
         "</svg>",
     ]
 

@@ -39,11 +39,11 @@ PROFIT = {
     "distillate_per_day": 150,
     "fuel_block_per_day": 50,
     "fuel_blocks_from_bits": 26.67,
-    "sell_tax": 0.01125,
+    "sell_tax": 0.0125,
 }
 
 FUEL_TAGS = ["SULPHURIC_COAL", "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK"]
-ALL_TAGS = FUEL_TAGS + ["CRUDE_GABAGOOL", "VERY_CRUDE_GABAGOOL", GABAGOOL]
+ALL_TAGS = FUEL_TAGS + ["CRUDE_GABAGOOL", "VERY_CRUDE_GABAGOOL", GABAGOOL, "BOOSTER_COOKIE"]
 SHORT_NAMES = {
     "SULPHURIC_COAL": "coal",
     "CRUDE_GABAGOOL_DISTILLATE": "distillate",
@@ -56,6 +56,7 @@ NAMES = {
     "CRUDE_GABAGOOL": "Crude Gabagool",
     "VERY_CRUDE_GABAGOOL": "Very Crude Gabagool",
     GABAGOOL: "Fuel Gabagool",
+    "BOOSTER_COOKIE": "Booster Cookie",
 }
 
 FALLBACK_FACTS = [
@@ -115,6 +116,14 @@ STOP_WORDS = {
     "around", "through", "without", "within", "against", "because",
     "while", "since", "until", "though", "although", "even", "really",
     "actually", "almost", "nearly", "exactly", "about", "around",
+    "approximately", "roughly", "usually", "generally", "probably",
+    "literally", "basically", "extremely", "absolutely", "certainly",
+    "apparently", "reportedly", "simply", "currently", "typically",
+    "eventually", "occasionally", "frequently", "rarely", "especially",
+    "particularly", "surprisingly", "interestingly", "commonly",
+    "today", "yesterday", "tomorrow", "ever", "never", "always",
+    "million", "millions", "billion", "billions", "thousand",
+    "thousands", "hundred", "hundreds", "trillion", "dozen", "dozens",
 }
 
 NOISE_VERBS = {
@@ -242,7 +251,7 @@ def fact_candidates(fact):
                 part = part[1:]
             if part:
                 phrase = " ".join(part)
-                if phrase.lower() not in {"a", "an", "the"} and len(phrase) >= 3:
+                if phrase.lower() not in STOP_WORDS and len(phrase) >= 3:
                     cands.append((90 + len(phrase), phrase))
             i = j
             continue
@@ -387,9 +396,12 @@ def series_metrics(week, key):
 
 def build_item(tag, products, snap, week):
     q = (products.get(tag) or {}).get("quick_status") or {}
-    bo, ib = side_prices(q)
-    if bo <= 0 or ib <= 0:
+    raw_b = q.get("buyPrice") or 0
+    raw_s = q.get("sellPrice") or 0
+    if raw_b <= 0 or raw_s <= 0:
         bo, ib = side_prices(snap)
+    else:
+        bo, ib = side_prices(q)
     bvol = q.get("buyVolume") or 0
     svol = q.get("sellVolume") or 0
     bmw = q.get("buyMovingWeek") or 0
@@ -522,8 +534,6 @@ def fetch_prices():
         if i:
             time.sleep(0.7)
         weeks[tag] = cofl_week(tag)
-
-    write_file("prices-fetched-at.txt", str(int(time.time())))
 
     items = {}
     for tag in ALL_TAGS:
@@ -732,6 +742,11 @@ def fetch_prices():
         "income": {"instasell": int(income_sell), "sell_order": int(income_order)} if income_available else {},
         "net": {"buy_order": int(net_bo), "instabuy": int(net_ib)} if income_available else {},
         "alerts": alerts,
+        "cookie": {
+            "buy_order": items["BOOSTER_COOKIE"]["buy_order"],
+            "instabuy": items["BOOSTER_COOKIE"]["instabuy"],
+            "week_median_buy": (items["BOOSTER_COOKIE"]["week"].get("buy") or {}).get("median"),
+        },
     }, indent=1))
 
     repo_append("prices.jsonl", json.dumps({
@@ -754,6 +769,11 @@ def fetch_prices():
         "net_buy_order": int(net_bo) if income_available else None,
         "net_instabuy": int(net_ib) if income_available else None,
         "alerts": alerts,
+        "cookie": {
+            "buy_order": items["BOOSTER_COOKIE"]["buy_order"],
+            "instabuy": items["BOOSTER_COOKIE"]["instabuy"],
+            "week_median_buy": (items["BOOSTER_COOKIE"]["week"].get("buy") or {}).get("median"),
+        },
         "fact": {
             "text": FACT_INFO.get("text") or "",
             "image_title": FACT_INFO.get("image_title") or "",

@@ -2,6 +2,9 @@
 
 a discord webhook that pings you daily to refuel your inferno minions on hypixel skyblock. free, runs on github actions.
 
+setup: 25x inferno minion (t3, fuel gabagool, rising celsius)
+layout id: `1.2.2!W2!25!@237351000!1!012401004!0!00000!0!!0!!0!!0!!0!!0!0!0!4!0!000!0!!0!4!0!4!0!40000110!1!20!1!20`
+
 ![net chart](chart.svg)
 
 ![reminder status](https://github.com/1901204818467/inferno/actions/workflows/daily-reminder.yml/badge.svg)

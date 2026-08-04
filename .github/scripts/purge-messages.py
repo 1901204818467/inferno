@@ -14,6 +14,7 @@ and keep the state untouched.
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -46,13 +47,18 @@ def main():
             with urllib.request.urlopen(req, timeout=15):
                 pass
             deleted += 1
+            print("purge: %s -> 204 deleted" % mid)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 gone += 1
+                print("purge: %s -> 404 already gone" % mid)
             else:
                 survivors.append(mid)
-        except Exception:
+                print("purge: %s -> HTTP %s (kept for retry)" % (mid, exc.code))
+        except Exception as exc:
             survivors.append(mid)
+            print("purge: %s -> %s (kept for retry)" % (mid, type(exc).__name__))
+        time.sleep(0.4)
     with open(os.path.join(TMP, "survivor-ids.json"), "w", encoding="utf-8") as f:
         json.dump(survivors, f)
     print("purge: %d deleted, %d already gone, %d failed, %d survivor id(s) kept for retry"
