@@ -10,6 +10,6 @@ a discord webhook that pings you daily to refuel your inferno minions on hypixel
 ![refuels](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2F1901204818467%2Finferno%2Fmain%2Fstats.json&query=refuels&label=refuels&color=blue)
 ![total net](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2F1901204818467%2Finferno%2Fmain%2Fstats.json&query=total_net_disp&label=total%20net&color=purple)
 
-each day: shopping list, crafting steps, an animal fact with picture, live profit. old messages delete themselves, newest after 3 hours.
+each day: shopping list, crafting steps, a random fact with picture, live profit. the previous message deletes itself when the new one sends.
 
 live prices from the hypixel bazaar api, history from sky.coflnet.com. secrets: `DISCORD_WEBHOOK_URL`, `DISCORD_USER_ID`.

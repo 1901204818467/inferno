@@ -116,6 +116,10 @@ jobs:
             echo "no changes to commit"
           else
             git commit -m "update reminder state and price snapshots"
-            git pull --rebase origin main || true
+            git fetch origin
+            git merge origin/main --no-edit || true
+            git checkout HEAD -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
+            git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
+            git commit -m "resolve data files" || true
             git push origin HEAD:main || { echo "state push failed - reminder may not be purged" >&2; exit 1; }
           fi

@@ -36,6 +36,7 @@ def fmt_axis(n):
 
 def main():
     pts = []
+    seen = set()
     try:
         with open("prices.jsonl", encoding="utf-8") as f:
             for line in f:
@@ -46,10 +47,12 @@ def main():
                     d = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                net = d.get("net_ib")
+                net = d.get("net_instabuy")
                 date = d.get("date")
-                if net is not None and date:
-                    pts.append((date, int(net)))
+                if net is None or not date or date in seen:
+                    continue
+                seen.add(date)
+                pts.append((date, int(net)))
     except FileNotFoundError:
         pass
 

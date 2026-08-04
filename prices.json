@@ -1,1 +1,23 @@
-
+{
+ "date": "-",
+ "generated_at_utc": "-",
+ "bazaar_age_s": -1,
+ "prices_source": "-",
+ "history_source": "sky.coflnet.com",
+ "crude": "free",
+ "coal": "-",
+ "distillate": "-",
+ "fuel_block": "-",
+ "fuel_bill": "-",
+ "income_sell": "-",
+ "income_order": "-",
+ "net_buy_order": "-",
+ "net_instabuy": "-",
+ "items": {},
+ "qty": {},
+ "subtotals": {},
+ "bill": {},
+ "income": {},
+ "net": {},
+ "alerts": {}
+}
