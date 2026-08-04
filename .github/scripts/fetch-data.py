@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Fetch the data for the Inferno reminder embed.
 
-- Animal: random Wikipedia article from animal categories, whole-paragraph
-  intro as the fact, lead image, and article title.
-- Prices: Hypixel Bazaar instant-buy (buyPrice) for Crude Gabagool and
-  Sulphuric Coal; lowest Auction House BIN preferred for Gabagool
-  Distillate and Inferno Fuel Block, with bazaar buyPrice as fallback.
+- Animal: short random animal fact + picture from the keyless Some Random
+  API (shuffled animal types), with a Wikipedia fallback (shuffled animal
+  categories). Facts are capped at 300 characters.
+- Prices: Hypixel Bazaar instant-buy (buyPrice) for Sulphuric Coal; lowest
+  Auction House BIN preferred for Gabagool Distillate and Inferno Fuel
+  Block, with bazaar buyPrice as fallback. Crude Gabagool is unpriced.
 
 Writes animal-name.txt, animal-fact.txt, animal-image.txt and
 shopping-list.txt into $RUNNER_TEMP. Never raises; every source has a
@@ -23,6 +24,11 @@ import urllib.request
 UA = {"User-Agent": "inferno-reminder/1.0 (GitHub Actions daily reminder)"}
 TMP = os.environ.get("RUNNER_TEMP", "/tmp")
 
+SOME_RANDOM_TYPES = [
+    "dog", "cat", "panda", "fox", "bird", "koala", "kangaroo",
+    "red_panda", "whale",
+]
+
 
 def get(url, timeout=15):
     req = urllib.request.Request(url, headers=UA)
@@ -35,11 +41,48 @@ def write_file(name, text):
         f.write(text)
 
 
+def humanize(animal_type):
+    return " ".join(w.capitalize() for w in animal_type.split("_"))
+
+
+def shorten(text, limit=300):
+    """Collapse whitespace and cut at a sentence boundary near the limit."""
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    for marker in (". ", "! ", "? "):
+        cut = head.rfind(marker)
+        if cut > 100:
+            return head[:cut + 1]
+    return head.rstrip() + "..."
+
+
 def fetch_animal():
+    types = list(SOME_RANDOM_TYPES)
+    random.shuffle(types)
+    for t in types:
+        try:
+            data = get("https://some-random-api.com/animal/%s" % t)
+            fact = (data.get("fact") or "").strip()
+            image = (data.get("image") or "").strip()
+            if not fact or not image:
+                continue
+            fact = shorten(fact, 300)
+            write_file("animal-name.txt", humanize(t))
+            write_file("animal-fact.txt", fact)
+            write_file("animal-image.txt", image)
+            print("animal:", humanize(t), "(some-random-api)")
+            return
+        except Exception:
+            continue
+
+    # Fallback: Wikipedia animal categories
     categories = [
         "Birds of prey", "Snakes", "Frogs", "Sharks", "Butterflies",
         "Owls", "Spiders", "Birds", "Amphibians", "Insects", "Carnivora",
     ]
+    random.shuffle(categories)
     start = time.time()
     for cat in categories:
         if time.time() - start > 90:
@@ -63,13 +106,13 @@ def fetch_animal():
                 thumb = (s.get("thumbnail") or {}).get("source") or ""
                 if not extract or not thumb:
                     continue
-                fact = re.sub(r"\s+", " ", extract).strip()[:1000]
+                fact = shorten(extract, 300)
                 image = thumb.split("?")[0]
                 name = s.get("title") or "Animal Fact"
                 write_file("animal-name.txt", name)
                 write_file("animal-fact.txt", fact)
                 write_file("animal-image.txt", image)
-                print("animal:", name)
+                print("animal:", name, "(wikipedia fallback)")
                 return
             except Exception:
                 continue
@@ -87,7 +130,7 @@ def fetch_prices():
     try:
         bz = get("https://api.hypixel.net/skyblock/bazaar", timeout=30)
         products = bz.get("products", {})
-        for tag in ("CRUDE_GABAGOOL", "SULPHURIC_COAL",
+        for tag in ("SULPHURIC_COAL",
                     "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK"):
             q = (products.get(tag) or {}).get("quick_status") or {}
             if q.get("buyPrice"):
@@ -140,7 +183,7 @@ def fetch_prices():
         return str(int(n))
 
     items = [
-        ("675x Crude Gabagool", 675, unit_price("CRUDE_GABAGOOL")),
+        ("675x Crude Gabagool", 675, 0),
         ("25x Sulphuric Coal", 25, unit_price("SULPHURIC_COAL")),
         ("150x Gabagool Distillate", 150, unit_price("CRUDE_GABAGOOL_DISTILLATE")),
         ("50x Inferno Fuel Block", 50, unit_price("INFERNO_FUEL_BLOCK")),
@@ -158,8 +201,7 @@ def fetch_prices():
     if total > 0:
         out += "\nTotal - %s" % fmt(total)
     write_file("shopping-list.txt", out)
-    print("prices: crude=%s coal=%s distillate=%s fuelblock=%s" % (
-        fmt(unit_price("CRUDE_GABAGOOL")),
+    print("prices: coal=%s distillate=%s fuelblock=%s" % (
         fmt(unit_price("SULPHURIC_COAL")),
         fmt(unit_price("CRUDE_GABAGOOL_DISTILLATE")),
         fmt(unit_price("INFERNO_FUEL_BLOCK")),
