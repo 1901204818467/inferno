@@ -27,68 +27,46 @@ jobs:
             fi
           fi
 
-      - name: Fetch animal fact and image from Wikipedia
+      - name: Fetch animal fact, prices, and shopping list
         run: |
-          user_agent="inferno-reminder/1.0 (GitHub Actions daily reminder)"
-          fact=""
-          image=""
-          for category in "Birds of prey" "Snakes" "Frogs" "Sharks" "Butterflies" "Owls" "Spiders" "Birds" "Amphibians" "Insects" "Carnivora"; do
-            sleep 1
-            enc=$(printf '%s' "$category" | jq -sRr @uri)
-            members=$(curl -s --max-time 20 -A "$user_agent" "https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:${enc}&cmtype=page&cmnamespace=0&cmlimit=500&format=json" | jq -r '.query.categorymembers[]?.title' || true)
-            title=$(printf '%s' "$members" | shuf -n 1)
-            if [ -z "$title" ]; then
-              continue
-            fi
-            tenc=$(printf '%s' "$title" | jq -sRr @uri)
-            summary=$(curl -s --max-time 20 -A "$user_agent" "https://en.wikipedia.org/api/rest_v1/page/summary/${tenc}" || true)
-            fact=$(printf '%s' "$summary" | jq -r '.extract // empty' 2>/dev/null || true)
-            fact=$(printf '%s' "$fact" | tr '\n' ' ' | sed 's/  */ /g')
-            fact=$(printf '%s' "$fact" | awk -F'. ' '{if (NF >= 2) print $1 ". " $2; else print $0}' | cut -c1-500)
-            image=$(printf '%s' "$summary" | jq -r '.thumbnail.source // empty' 2>/dev/null | sed 's/?.*//' || true)
-            if [ -n "$fact" ] && [ -n "$image" ]; then
-              break
-            fi
-            fact=""
-            image=""
-          done
-          if [ -n "$fact" ]; then
-            printf '%s' "$fact" > "$RUNNER_TEMP/animal-fact.txt"
-          fi
-          if [ -n "$image" ]; then
-            printf '%s' "$image" > "$RUNNER_TEMP/animal-image.txt"
-          fi
+          python3 .github/scripts/fetch-data.py || echo "data fetch failed, using fallbacks"
 
       - name: Send reminder and save state
         run: |
           fact=""
           image=""
+          animal_title="Animal Fact"
           if [ -f "$RUNNER_TEMP/animal-fact.txt" ]; then
             fact=$(cat "$RUNNER_TEMP/animal-fact.txt")
           fi
           if [ -f "$RUNNER_TEMP/animal-image.txt" ]; then
             image=$(cat "$RUNNER_TEMP/animal-image.txt")
           fi
+          if [ -f "$RUNNER_TEMP/animal-name.txt" ]; then
+            animal_title=$(cat "$RUNNER_TEMP/animal-name.txt")
+          fi
 
           shop_list=$(printf '675x Crude Gabagool\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
+          if [ -f "$RUNNER_TEMP/shopping-list.txt" ]; then
+            shop_list=$(cat "$RUNNER_TEMP/shopping-list.txt")
+          fi
           craft_steps=$(printf '/recipe gabagool\n1. 25x fuel gabagool supercraft\n2. 25x rare inferno minion fuel supercraft')
 
           main_embed=$(jq -n \
-            --arg title "Refuel Inferno Minions" \
             --arg icon "https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410" \
             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg shop "$shop_list" \
             --arg craft "$craft_steps" \
-            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, timestamp: $ts, fields: [{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]}')
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: [{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]}')
 
           if [ -n "$fact" ] && [ -n "$image" ]; then
-            animal_embed=$(jq -n --arg title "Animal Fact" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
+            animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
             embeds=$(jq -n --argjson a "$main_embed" --argjson b "$animal_embed" '[$a, $b]')
           else
             embeds=$(jq -n --argjson a "$main_embed" '[$a]')
           fi
 
-          payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + "> Refuel Inferno Minions"), embeds: $embeds}')
+          payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + ">"), embeds: $embeds}')
 
           response=$(curl -s --max-time 30 -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true")
           message_id=$(printf '%s' "$response" | jq -r '.id // empty' || true)
