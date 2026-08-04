@@ -222,39 +222,22 @@ def fetch_fallback_fact():
 
 
 def fetch_fact():
-    if random.random() < 0.5:
-        try:
-            r = get("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", timeout=15)
-            fact = (r or {}).get("text", "").strip()
-            if fact:
-                write_file("animal-fact.txt", fact)
-                title, thumb = find_image_for_fact(fact)
-                if thumb:
-                    write_file("animal-name.txt", title)
-                    write_file("animal-image.txt", thumb)
-                    print("fact: uselessfacts \"%s\" -> image=%s" % (fact[:60], title))
-                else:
-                    write_file("animal-name.txt", "Random Fact")
-                    print("fact: uselessfacts \"%s\" (no image)" % fact[:60])
-                return
-        except Exception:
-            pass
-    else:
-        try:
-            r = get("https://catfact.ninja/fact", timeout=15)
-            fact = (r or {}).get("fact", "").strip()
-            if fact:
-                write_file("animal-fact.txt", fact)
-                title, thumb = wiki_image("Cat")
-                if thumb:
-                    write_file("animal-name.txt", title)
-                    write_file("animal-image.txt", thumb)
-                else:
-                    write_file("animal-name.txt", "Cat Fact")
-                print("fact: catfact \"%s\"" % fact[:60])
-                return
-        except Exception:
-            pass
+    try:
+        r = get("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", timeout=15)
+        fact = (r or {}).get("text", "").strip()
+        if fact:
+            write_file("animal-fact.txt", fact)
+            title, thumb = find_image_for_fact(fact)
+            if thumb:
+                write_file("animal-name.txt", title)
+                write_file("animal-image.txt", thumb)
+                print("fact: uselessfacts \"%s\" -> image=%s" % (fact[:60], title))
+            else:
+                write_file("animal-name.txt", "Random Fact")
+                print("fact: uselessfacts \"%s\" (no image)" % fact[:60])
+            return
+    except Exception:
+        pass
     fetch_fallback_fact()
 
 
