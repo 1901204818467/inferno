@@ -55,18 +55,14 @@ jobs:
           fi
           icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
 
-          ts_epoch=$(date +%s)
-          footer="<t:${ts_epoch}:f>"
-
           fields_json=$(jq -n --arg shop "$shop_list" --arg craft "$craft_steps" '[{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]')
           if [ -n "$profit_text" ]; then
             fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
           fi
           main_embed=$(jq -n \
             --arg icon "$icon" \
-            --arg footer "$footer" \
             --argjson fields "$fields_json" \
-            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, fields: $fields, footer: {text: $footer}}')
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, fields: $fields}')
 
           if [ -n "$fact" ]; then
             if [ -n "$image" ]; then
