@@ -54,16 +54,17 @@ jobs:
             profit_text=$(cat "$RUNNER_TEMP/profit.txt")
           fi
           icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
-          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          # freshness stamp: how many seconds ago the prices were pulled
-          footer=""
+          # freshness stamp: combined with the 'sent at' time so it sits in
+          # the footer right where Discord's timestamp would have been
+          ts_human=$(date -u "+%d %b %H:%M UTC")
+          footer="$ts_human"
           if [ -f "$RUNNER_TEMP/prices-fetched-at.txt" ]; then
             fetched_at=$(cat "$RUNNER_TEMP/prices-fetched-at.txt")
             if [ "$fetched_at" -gt 0 ] 2>/dev/null; then
               age=$(( $(date +%s) - fetched_at ))
               if [ "$age" -ge 0 ] && [ "$age" -lt 3600 ]; then
-                footer="prices fetched ${age}s ago"
+                footer="$ts_human &#183; prices fetched ${age}s ago"
               fi
             fi
           fi
@@ -72,20 +73,11 @@ jobs:
           if [ -n "$profit_text" ]; then
             fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
           fi
-          if [ -n "$footer" ]; then
-            main_embed=$(jq -n \
-              --arg icon "$icon" \
-              --arg ts "$ts" \
-              --arg footer "$footer" \
-              --argjson fields "$fields_json" \
-              '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: $fields, footer: {text: $footer}}')
-          else
-            main_embed=$(jq -n \
-              --arg icon "$icon" \
-              --arg ts "$ts" \
-              --argjson fields "$fields_json" \
-              '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: $fields}')
-          fi
+          main_embed=$(jq -n \
+            --arg icon "$icon" \
+            --arg footer "$footer" \
+            --argjson fields "$fields_json" \
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, fields: $fields, footer: {text: $footer}}')
 
           if [ -n "$fact" ]; then
             if [ -n "$image" ]; then
@@ -113,69 +105,21 @@ jobs:
           fi
           new_ids=$(jq -n --arg new "$message_id" --argjson kept "$kept" '$kept[-49:] + [$new]')
           printf '{"ids":%s,"sent_at":%s}\n' "$new_ids" "$(date +%s)" > .github/reminder-state.json
-          echo "new state: $(cat .github/reminder-state.json)
+          echo "new state: $(cat .github/reminder-state.json)"
 
-          # lifetime stats live in stats.json (not in the reminder embed):
-          # refuels sent, fuel blocks burned, and total net since tracking
-          python3 - <<'PY'
-          import json, os
-          stats = {}
-          try:
-              with open('stats.json', encoding='utf-8') as f:
-                  stats = json.load(f)
-          except FileNotFoundError:
-              pass  # fresh start, no stats yet
-          day = {}
-          try:
-              with open(os.path.join(os.environ.get('RUNNER_TEMP', '/tmp'), 'stats-day.json'), encoding='utf-8') as f:
-                  day = json.load(f)
-          except Exception:
-              pass
-          dbo = int(day.get('net_bo') or 0)
-          dib = int(day.get('net_ib') or 0)
-          stats['refuels'] = stats.get('refuels', 0) + 1
-          stats['fuel_blocks'] = stats.get('fuel_blocks', 0) + 50
-          stats['total_net_bo'] = stats.get('total_net_bo', 0) + dbo
-          stats['total_net_ib'] = stats.get('total_net_ib', 0) + dib
-          stats['total_income_sell'] = stats.get('total_income_sell', 0) + int(day.get('income_sell') or 0)
-          stats['total_income_order'] = stats.get('total_income_order', 0) + int(day.get('income_order') or 0)
-          stats['total_spent_bo'] = stats.get('total_spent_bo', 0) + int(day.get('spent_bo') or 0)
-          stats['total_spent_ib'] = stats.get('total_spent_ib', 0) + int(day.get('spent_ib') or 0)
-          stats.setdefault('first_day', day.get('date', ''))
-          if day.get('date'):
-              stats['last_day'] = day['date']
-          if dbo > stats.get('best_day_net_bo', 0):
-              stats['best_day_net_bo'] = dbo
-              stats['best_day_date_bo'] = day.get('date', '')
-          if dib > stats.get('best_day_net_ib', 0):
-              stats['best_day_net_ib'] = dib
-              stats['best_day_date_ib'] = day.get('date', '')
-          r = stats['refuels']
-          stats['avg_net_bo'] = stats['total_net_bo'] // r if r else 0
-          stats['avg_net_ib'] = stats['total_net_ib'] // r if r else 0
-          def fmt(n):
-              if n >= 1000000000:
-                  return '%.2fB' % (n / 1e9)
-              if n >= 1000000:
-                  return '%.1fM' % (n / 1e6)
-              if n >= 1000:
-                  return '%.1fK' % (n / 1e3)
-              return str(int(n))
-          stats['total_net_disp'] = fmt(stats.get('total_net_ib', 0))
-          stats['total_spent_disp'] = fmt(stats.get('total_spent_ib', 0))
-          stats['avg_net_ib_disp'] = fmt(stats.get('avg_net_ib', 0))
-          stats['best_day_net_ib_disp'] = fmt(stats.get('best_day_net_ib', 0))
-          with open('stats.json', 'w', encoding='utf-8') as f:
-              json.dump(stats, f, indent=1)
-          PY
+          # lifetime stats accumulated by a standalone script (no YAML
+          # heredoc that can lose Python indentation on deploy)
+          python3 .github/scripts/update-stats.py
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          if git diff --quiet HEAD -- .github/reminder-state.json prices.json prices.jsonl stats.json; then
-            echo "state unchanged, nothing to push"
+          # use -A so files created this run (prices.jsonl first time) are
+          # added even if they start untracked
+          git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json
+          if git diff --cached --quiet HEAD; then
+            echo "no changes to commit"
           else
-            git add .github/reminder-state.json prices.json prices.jsonl stats.json
-            git commit -m "update reminder state and price snapshots" || exit 1
+            git commit -m "update reminder state and price snapshots"
             git pull --rebase origin main || true
             git push origin HEAD:main || { echo "state push failed - reminder may not be purged" >&2; exit 1; }
           fi

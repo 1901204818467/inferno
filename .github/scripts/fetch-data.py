@@ -416,15 +416,10 @@ def fetch_prices():
     total = 0
     all_priced = True
 
-    if coal_bo > 0 and coal_ib > 0:
+    cp = pair(coal_bo, coal_ib)
+    if cp:
         total += 25 * coal_ib
-        if round(coal_bo) == round(coal_ib):
-            lines.append("25x Sulphuric Coal - %s" % fmt(coal_ib))
-        else:
-            lines.append(
-                "25x Sulphuric Coal - %s instabuy / %s instasell"
-                % (fmt(coal_ib), fmt(coal_bo))
-            )
+        lines.append("25x Sulphuric Coal - %s" % cp)
     else:
         all_priced = False
         lines.append("25x Sulphuric Coal")
@@ -446,7 +441,13 @@ def fetch_prices():
         lines.append("50x Inferno Fuel Block")
 
     if all_priced and total > 0:
-        lines.append("Total - %s (at instabuy)" % fmt(total))
+        total_bo = int(
+            25 * coal_bo + 150 * dist_bo + 50 * fb_bo
+        )
+        lines.append(
+            "Total - %s buy order | %s instabuy"
+            % (fmt(total_bo), fmt(total))
+        )
 
     write_file("shopping-list.txt", "\n".join(lines))
     print("prices: coal=%s dist=%s/%s fb=%s/%s total=%s" % (
