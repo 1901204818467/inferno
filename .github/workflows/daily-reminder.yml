@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Purge all previous reminder messages
         run: |
@@ -54,30 +56,26 @@ jobs:
           icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
           ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          animal_embed=""
+          fields_json=$(jq -n --arg shop "$shop_list" --arg craft "$craft_steps" '[{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]')
+          if [ -n "$profit_text" ]; then
+            fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
+          fi
+          main_embed=$(jq -n \
+            --arg icon "$icon" \
+            --arg ts "$ts" \
+            --argjson fields "$fields_json" \
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, timestamp: $ts, fields: $fields}')
+
           if [ -n "$fact" ]; then
             if [ -n "$image" ]; then
-              animal_embed=$(jq -n --arg icon "$icon" --arg ts "$ts" --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, description: $desc, timestamp: $ts, image: {url: $img}}')
+              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
             else
-              animal_embed=$(jq -n --arg icon "$icon" --arg ts "$ts" --arg title "$animal_title" --arg desc "$fact" '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, description: $desc, timestamp: $ts}')
+              animal_embed=$(jq -n --arg title "$animal_title" --arg desc "$fact" '{title: $title, description: $desc}')
             fi
-          fi
-          shopping_embed=$(jq -n --arg shop "$shop_list" '{color: 15158332, fields: [{name: "Shopping List", value: $shop}]}')
-          crafting_embed=$(jq -n --arg craft "$craft_steps" '{color: 3447003, fields: [{name: "Crafting", value: $craft}]}')
-          profit_embed=""
-          if [ -n "$profit_text" ]; then
-            profit_embed=$(jq -n --arg profit "$profit_text" '{color: 3066993, fields: [{name: "Daily Profit", value: $profit}]}')
-          fi
-
-          if [ -n "$animal_embed" ]; then
-            embeds="[$animal_embed, $shopping_embed, $crafting_embed"
+            embeds=$(jq -n --argjson a "$main_embed" --argjson b "$animal_embed" '[$a, $b]')
           else
-            embeds="[$shopping_embed, $crafting_embed"
+            embeds=$(jq -n --argjson a "$main_embed" '[$a]')
           fi
-          if [ -n "$profit_text" ]; then
-            embeds="$embeds, $profit_embed"
-          fi
-          embeds="$embeds]"
 
           payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + ">"), embeds: $embeds}')
 
@@ -97,6 +95,11 @@ jobs:
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add .github/reminder-state.json
-          git commit -m "update reminder state" || echo "nothing to commit"
-          git push || echo "warning: state push failed"
+          if git diff --quiet HEAD -- .github/reminder-state.json; then
+            echo "state unchanged, nothing to push"
+          else
+            git add .github/reminder-state.json
+            git commit -m "update reminder state" || exit 1
+            git pull --rebase origin main || true
+            git push origin HEAD:main || { echo "state push failed - reminder may not be purged" >&2; exit 1; }
+          fi

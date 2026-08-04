@@ -11,7 +11,7 @@ each day the message has:
 - a random animal fact with a live wikipedia picture of that animal.
 - a daily profit estimate: income at bazaar instasell and sell order, fuel at buy order and instabuy, net per day for both.
 
-each embed gets its own colour so it's easy to scan: red for shopping, blue for crafting, green for profit, orange for the animal.
+it's two embeds: one with the shopping list, crafting steps and profit numbers, and one with the animal fact and its picture.
 
 the message deletes itself after 3 hours, and every new message wipes the old ones first, so the channel never piles up with reminders.
 
