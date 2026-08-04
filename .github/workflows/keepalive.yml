@@ -1,12 +1,10 @@
 name: Keepalive
-
 permissions:
   contents: write
-
 on:
   schedule:
     - cron: '0 0 1 * *'   # once a month
-
+  workflow_dispatch:        # <- add this line
 jobs:
   keepalive:
     runs-on: ubuntu-latest
