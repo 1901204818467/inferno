@@ -55,6 +55,7 @@ PROFIT = {
     "coal_per_day": 25,
     "distillate_per_day": 150,
     "fuel_block_per_day": 50,
+    "fuel_blocks_from_bits": 26.67,
     "sell_tax": 0.01125,
 }
 
@@ -444,6 +445,10 @@ def fetch_prices():
     gab_q = (products.get(GABAGOOL) or {}).get("quick_status") or {}
     gab_vol = gab_q.get("buyMovingWeek") or gab_q.get("buyVolume") or 0
 
+    fb_bazaar = max(0.0, PROFIT["fuel_block_per_day"] - PROFIT["fuel_blocks_from_bits"])
+    fb_free = int(round(PROFIT["fuel_blocks_from_bits"]))
+    fb_buy = int(round(fb_bazaar))
+
     lines = ["675x Crude Gabagool - free"]
     total = 0
     all_priced = True
@@ -466,15 +471,15 @@ def fetch_prices():
 
     fp = pair(fb_bo, fb_ib)
     if fp:
-        total += 50 * fb_ib
-        lines.append("50x Inferno Fuel Block - %s" % fp)
+        total += fb_bazaar * fb_ib
+        lines.append("50x Inferno Fuel Block - %dx free (bits) | %dx bazaar @ %s" % (fb_free, fb_buy, fp))
     else:
         all_priced = False
         lines.append("50x Inferno Fuel Block")
 
     if all_priced and total > 0:
         total_bo = int(
-            25 * coal_bo + 150 * dist_bo + 50 * fb_bo
+            25 * coal_bo + 150 * dist_bo + fb_bazaar * fb_bo
         )
         lines.append(
             "Total - %s buy order | %s instabuy"
@@ -493,12 +498,12 @@ def fetch_prices():
         cost_bo = (
             PROFIT["coal_per_day"] * coal_bo
             + PROFIT["distillate_per_day"] * dist_bo
-            + PROFIT["fuel_block_per_day"] * fb_bo
+            + fb_bazaar * fb_bo
         )
         cost_ib = (
             PROFIT["coal_per_day"] * coal_ib
             + PROFIT["distillate_per_day"] * dist_ib
-            + PROFIT["fuel_block_per_day"] * fb_ib
+            + fb_bazaar * fb_ib
         )
     weeks = {}
     for i, tag in enumerate(("SULPHURIC_COAL", "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK")):
@@ -513,7 +518,7 @@ def fetch_prices():
     stock = bill_dip(weeks, cost_ib, {
         "SULPHURIC_COAL": PROFIT["coal_per_day"],
         "CRUDE_GABAGOOL_DISTILLATE": PROFIT["distillate_per_day"],
-        "INFERNO_FUEL_BLOCK": PROFIT["fuel_block_per_day"],
+        "INFERNO_FUEL_BLOCK": fb_bazaar,
     })
     tip = craft_buy_tip(gab_bo, coal_ib, gab_vol)
     extras = [e for e in (spike, stock, tip) if e]
@@ -540,7 +545,7 @@ def fetch_prices():
         day = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 3 * 3600))
         coal_sub = int(PROFIT["coal_per_day"] * coal_ib)
         dist_sub = int(PROFIT["distillate_per_day"] * dist_ib)
-        fb_sub = int(PROFIT["fuel_block_per_day"] * fb_ib)
+        fb_sub = int(fb_bazaar * fb_ib)
         stock_pct = None
         spike_pct_map = {}
         if spike:
@@ -584,6 +589,8 @@ def fetch_prices():
             "coal_bo": int(coal_bo), "coal_ib": int(coal_ib),
             "dist_bo": int(dist_bo), "dist_ib": int(dist_ib),
             "fb_bo": int(fb_bo), "fb_ib": int(fb_ib),
+            "fb_bits_qty": int(round(PROFIT["fuel_blocks_from_bits"])),
+            "fb_bazaar_qty": int(round(fb_bazaar)),
             "gab_bo": int(gab_bo), "gab_ib": int(gab_ib),
             "crude_sell": int(crude_sell),
             "crude_order": int(crude_order),
