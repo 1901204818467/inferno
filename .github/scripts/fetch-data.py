@@ -37,7 +37,6 @@ PROFIT = {
     "coal_per_day": 25,            # one Inferno Minion Fuel per minion, 24h each
     "distillate_per_day": 150,     # 6 Gabagool Distillate per fuel
     "fuel_block_per_day": 50,      # 2 Inferno Fuel Blocks per fuel
-    "setup_cost": 149524388.68,    # full 25-minion setup
     "sell_tax": 0.01125,           # bazaar tax, flipper 1 (1.25% - 0.125%), mayor none
 }
 
@@ -267,13 +266,10 @@ def fetch_prices():
         )
         net = income - cost_bo
         plines = [
-            "Income - %s (bazaar sell)" % fmt(income),
+            "Income - %s (bazaar instasell)" % fmt(income),
             "Fuel - %s buy order / %s instabuy" % (fmt(cost_bo), fmt(cost_ib)),
             "Net - %s/day (buy order refuel)" % fmt(net),
         ]
-        if net > 0:
-            plines.append("Setup repaid in ~%d days" % int(round(
-                PROFIT["setup_cost"] / net)))
         write_file("profit.txt", "\n".join(plines))
         print("profit: income=%s cost_bo=%s cost_ib=%s net=%s" % (
             fmt(income), fmt(cost_bo), fmt(cost_ib), fmt(net)))
