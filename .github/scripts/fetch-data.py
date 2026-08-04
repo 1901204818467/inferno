@@ -390,7 +390,7 @@ def fetch_prices():
             return ""
         if round(bo) == round(ib):
             return fmt(ib)
-        return "%s buy order / %s instabuy" % (fmt(bo), fmt(ib))
+        return "%s buy order | %s instabuy" % (fmt(bo), fmt(ib))
 
     coal_bo, coal_ib = prices("SULPHURIC_COAL")
     dist_bo, dist_ib = prices("CRUDE_GABAGOOL_DISTILLATE")
@@ -492,7 +492,7 @@ def fetch_prices():
             % (fmt(net_bo), fmt(net_ib)),
         ] + extras
         write_file("profit.txt", "\n".join(plines))
-        day = time.strftime("%Y-%m-%d", time.gmtime())
+        day = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 3 * 3600))
         coal_sub = int(PROFIT["coal_per_day"] * coal_ib)
         dist_sub = int(PROFIT["distillate_per_day"] * dist_ib)
         fb_sub = int(PROFIT["fuel_block_per_day"] * fb_ib)

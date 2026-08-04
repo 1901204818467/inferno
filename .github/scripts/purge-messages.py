@@ -29,7 +29,7 @@ def main():
     try:
         with open(STATE_FILE, encoding="utf-8") as f:
             state = json.load(f)
-    except Exception:
+    except (FileNotFoundError, json.JSONDecodeError):
         state = {}
     ids = state.get("ids") or []
     legacy = state.get("message_id")
