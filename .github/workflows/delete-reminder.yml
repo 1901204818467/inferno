@@ -1,0 +1,53 @@
+name: Delete Discord Reminder
+concurrency:
+  group: delete-reminder
+  cancel-in-progress: true
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+jobs:
+  delete-reminder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete reminder message after 3 hours
+        run: |
+          if [ ! -f .github/reminder-state.json ]; then
+            echo "no stored message, nothing to do"
+            exit 0
+          fi
+          message_id=$(jq -r '.message_id // empty' .github/reminder-state.json || true)
+          sent_at=$(jq -r '.sent_at // 0' .github/reminder-state.json || true)
+          if [ -z "$message_id" ] || [ -z "$sent_at" ] || [ "$sent_at" = "0" ]; then
+            echo "state file contains no message"
+            exit 0
+          fi
+          case "$sent_at" in
+            *[!0-9]*)
+              echo "invalid sent_at in state file"
+              exit 0
+              ;;
+          esac
+          now=$(date +%s)
+          if [ $((now - sent_at)) -lt 10800 ]; then
+            echo "reminder message is not 3 hours old yet, skipping"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -X DELETE "${WEBHOOK_URL}/messages/${message_id}" || true)
+          if [ "$code" != "204" ] && [ "$code" != "404" ]; then
+            echo "delete request failed (http $code), keeping state for a later attempt"
+            exit 0
+          fi
+          rm -f .github/reminder-state.json
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .github/reminder-state.json
+          git commit -m "clear reminder state" || echo "nothing to commit"
+          git push || echo "warning: state push failed"

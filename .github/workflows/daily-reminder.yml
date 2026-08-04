@@ -1,30 +1,106 @@
 name: Daily Discord Reminder
+concurrency:
+  group: daily-reminder
+  cancel-in-progress: true
 on:
   schedule:
     - cron: '30 21 * * *'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+env:
+  WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  USER_ID: ${{ secrets.DISCORD_USER_ID }}
 jobs:
   send-reminder:
     runs-on: ubuntu-latest
-    env:
-      WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      USER_ID: ${{ secrets.DISCORD_USER_ID }}
-      REMINDER_MESSAGE: "Refuel Inferno Minions"
+    timeout-minutes: 10
     steps:
-      - name: Send Discord ping
-        id: send
-        run: |
-          payload=$(jq -n --arg uid "$USER_ID" --arg msg "$REMINDER_MESSAGE" \
-            '{content: ("<@" + $uid + "> " + $msg)}')
-          response=$(curl -s -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true")
-          message_id=$(echo "$response" | jq -r '.id')
-          echo "message_id=$message_id" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
 
-      - name: Wait 3 hours
-        run: sleep 10800
-
-      - name: Delete the message
+      - name: Delete previous reminder message
         run: |
-          curl -s -X DELETE "${WEBHOOK_URL}/messages/${{ steps.send.outputs.message_id }}"
+          if [ -f .github/reminder-state.json ]; then
+            prev_id=$(jq -r '.message_id // empty' .github/reminder-state.json || true)
+            if [ -n "$prev_id" ]; then
+              curl -s --max-time 15 -X DELETE "${WEBHOOK_URL}/messages/${prev_id}" > /dev/null || true
+            fi
+          fi
+
+      - name: Fetch animal fact and image from Wikipedia
+        run: |
+          user_agent="inferno-reminder/1.0 (GitHub Actions daily reminder)"
+          fact=""
+          image=""
+          for category in "Birds of prey" "Snakes" "Frogs" "Sharks" "Butterflies" "Owls" "Spiders" "Birds" "Amphibians" "Insects" "Carnivora"; do
+            sleep 1
+            enc=$(printf '%s' "$category" | jq -sRr @uri)
+            members=$(curl -s --max-time 20 -A "$user_agent" "https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:${enc}&cmtype=page&cmnamespace=0&cmlimit=500&format=json" | jq -r '.query.categorymembers[]?.title' || true)
+            title=$(printf '%s' "$members" | shuf -n 1)
+            if [ -z "$title" ]; then
+              continue
+            fi
+            tenc=$(printf '%s' "$title" | jq -sRr @uri)
+            summary=$(curl -s --max-time 20 -A "$user_agent" "https://en.wikipedia.org/api/rest_v1/page/summary/${tenc}" || true)
+            fact=$(printf '%s' "$summary" | jq -r '.extract // empty' 2>/dev/null || true)
+            fact=$(printf '%s' "$fact" | tr '\n' ' ' | sed 's/  */ /g')
+            fact=$(printf '%s' "$fact" | awk -F'. ' '{if (NF >= 2) print $1 ". " $2; else print $0}' | cut -c1-500)
+            image=$(printf '%s' "$summary" | jq -r '.thumbnail.source // empty' 2>/dev/null | sed 's/?.*//' || true)
+            if [ -n "$fact" ] && [ -n "$image" ]; then
+              break
+            fi
+            fact=""
+            image=""
+          done
+          if [ -n "$fact" ]; then
+            printf '%s' "$fact" > "$RUNNER_TEMP/animal-fact.txt"
+          fi
+          if [ -n "$image" ]; then
+            printf '%s' "$image" > "$RUNNER_TEMP/animal-image.txt"
+          fi
+
+      - name: Send reminder and save state
+        run: |
+          fact=""
+          image=""
+          if [ -f "$RUNNER_TEMP/animal-fact.txt" ]; then
+            fact=$(cat "$RUNNER_TEMP/animal-fact.txt")
+          fi
+          if [ -f "$RUNNER_TEMP/animal-image.txt" ]; then
+            image=$(cat "$RUNNER_TEMP/animal-image.txt")
+          fi
+
+          shop_list=$(printf '675x Crude Gabagool\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
+          craft_steps=$(printf '/recipe gabagool\n1. 25x fuel gabagool supercraft\n2. 25x rare inferno minion fuel supercraft')
+
+          main_embed=$(jq -n \
+            --arg title "Refuel Inferno Minions" \
+            --arg icon "https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg shop "$shop_list" \
+            --arg craft "$craft_steps" \
+            '{color: 16739125, author: {name: "Inferno Minion", icon_url: $icon}, title: $title, timestamp: $ts, fields: [{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]}')
+
+          if [ -n "$fact" ] && [ -n "$image" ]; then
+            animal_embed=$(jq -n --arg title "Animal Fact" --arg desc "$fact" --arg img "$image" '{title: $title, description: $desc, image: {url: $img}}')
+            embeds=$(jq -n --argjson a "$main_embed" --argjson b "$animal_embed" '[$a, $b]')
+          else
+            embeds=$(jq -n --argjson a "$main_embed" '[$a]')
+          fi
+
+          payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + "> Refuel Inferno Minions"), embeds: $embeds}')
+
+          response=$(curl -s --max-time 30 -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true")
+          message_id=$(printf '%s' "$response" | jq -r '.id // empty' || true)
+          if [ -z "$message_id" ]; then
+            echo "Failed to send reminder: $(printf '%s' "$response" | head -c 300)"
+            exit 1
+          fi
+
+          printf '{"message_id":"%s","sent_at":%s}\n' "$message_id" "$(date +%s)" > .github/reminder-state.json
+
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .github/reminder-state.json
+          git commit -m "update reminder state" || echo "nothing to commit"
+          git push || echo "warning: state push failed"
