@@ -64,7 +64,11 @@ def fmt(n):
         return s.rstrip("0").rstrip(".") + "M"
     if n >= 1000:
         s = "%.1f" % (n / 1000.0)
-        return s.rstrip("0").rstrip(".") + "K"
+        k = s.rstrip("0").rstrip(".")
+        if float(k) >= 1000:
+            s = "%.2f" % (n / 1000000.0)
+            return s.rstrip("0").rstrip(".") + "M"
+        return k + "K"
     return str(int(n))
 
 
@@ -176,7 +180,7 @@ def choose(rec, held):
         and rec["hyper_vol"] >= GATES["hyper_vol_min"]
         and rec["hyper_anchor"] > 0
         and rec["hyper_margin"] >= GATES["roi_threshold"] * rec["hyper_anchor"]
-        and (rec["hyper_floor"] is None or rec["hyper_floor"] >= 0)
+        and (rec["hyper_floor"] is not None and rec["hyper_floor"] >= 0)
     ):
         n = min(cap, int(available // RECIPES["hypergolic"]["very"]))
         if n >= 1:
@@ -187,7 +191,7 @@ def choose(rec, held):
         and not rec["gab_falling"]
         and rec["gab_vol"] >= GATES["gab_vol_min"]
         and rec["gab_margin"] >= GATES["gab_min_margin"]
-        and (rec["gab_floor"] is None or rec["gab_floor"] >= 0)
+        and (rec["gab_floor"] is not None and rec["gab_floor"] >= 0)
     ):
         return "CRAFT_GABAGOOL", 0, PROFIT["very_crude_per_day"]
 
@@ -260,9 +264,10 @@ def decision_lines(rec, decision, n, held):
         lines.append(leaderboard)
         lines.append("Stockpile - %s very held | sell raw if you need coins" % fmt_int(held))
     else:
-        daily = PROFIT["very_crude_per_day"] * rec["very_so"] * (1.0 - PROFIT["sell_tax"])
+        so = rec["very_so"] or rec["very_is"]
+        daily = PROFIT["very_crude_per_day"] * so * (1.0 - PROFIT["sell_tax"])
         lines.append("Decision - Sell %dx Very Crude - sell order" % PROFIT["very_crude_per_day"])
-        lines.append("%s/very | %s/day | best play today" % (fmt(rec["very_so"]), fmt(daily)))
+        lines.append("%s/very | %s/day | best play today" % (fmt(so), fmt(daily)))
         lines.append(leaderboard)
         lines.append("Stockpile - %s very held" % fmt_int(held))
     return lines
@@ -270,6 +275,8 @@ def decision_lines(rec, decision, n, held):
 
 def main():
     prices = load_json("prices.json", {})
+    if not isinstance(prices, dict):
+        prices = {}
     items = prices.get("items") or {}
     date = prices.get("date") or ""
 
@@ -283,7 +290,9 @@ def main():
         return
 
     state = dict(EMPTY_STATE)
-    state.update(load_json("stockpile-state.json", {}))
+    loaded = load_json("stockpile-state.json", {})
+    if isinstance(loaded, dict):
+        state.update(loaded)
     held = max(0, int(state.get("very_produced") or 0) - int(state.get("very_consumed") or 0))
 
     rec = compute(very, coal, gab, hyper)

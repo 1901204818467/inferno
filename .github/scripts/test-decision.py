@@ -136,6 +136,35 @@ def main():
     expect(st2["very_produced"] == 175 and st2["very_consumed"] == 144, "dedup rerun does not double-add")
     expect(txt2.startswith("Decision - Craft 5x Hypergolic"), "dedup rerun crafts from stockpile: %r" % (txt2.splitlines()[0] if txt2 else "empty"))
 
+    hyper_no_instasell = item(0, 5500000, wm=5100000, vol=991)
+    proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_dead, hyper_no_instasell))
+    cases += 1
+    expect(proc.returncode == 0, "floor-gate hyper case exits 0")
+    expect(txt.startswith("Decision - Sell 175x Very Crude"), "floor-gate hyper blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(st["very_consumed"] == 175, "floor-gate hyper case sells raw")
+
+    gab_no_instasell = item(0, 20000, wm=20000, vol=40000)
+    proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_no_instasell, hyper_bad))
+    cases += 1
+    expect(proc.returncode == 0, "floor-gate gab case exits 0")
+    expect(txt.startswith("Decision - Sell 175x Very Crude"), "floor-gate gab blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(st["very_consumed"] == 175, "floor-gate gab case sells raw")
+
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import importlib.util, sys; "
+         "spec = importlib.util.spec_from_file_location('d', %r); "
+         "d = importlib.util.module_from_spec(spec); spec.loader.exec_module(d); "
+         "assert d.fmt(999950) == '1M', d.fmt(999950); "
+         "assert d.fmt(999949) == '999.9K', d.fmt(999949); "
+         "assert d.fmt(1234567) == '1.23M', d.fmt(1234567); "
+         "print('fmt ok')" % DECISION],
+        capture_output=True, text=True, timeout=60,
+    )
+    out = proc.stdout
+    cases += 1
+    expect(proc.returncode == 0 and out.strip() == "fmt ok", "fmt 1000K rounding case: %r" % out.strip())
+
     print("ALL %d CASES PASSED" % cases)
 
 

@@ -82,7 +82,7 @@ def main():
         hm = day.get("hyper_margin")
         if hm is not None:
             stats["last_margin_hyper"] = int(hm)
-            if int(hm) > stats.get("best_margin_hyper", 0):
+            if "best_margin_hyper" not in stats or int(hm) > stats.get("best_margin_hyper", 0):
                 stats["best_margin_hyper"] = int(hm)
                 stats["best_margin_date"] = today
 
@@ -93,17 +93,17 @@ def main():
 
         nbo = int(day.get("net_bo") or 0)
         nib = int(day.get("net_ib") or 0)
-        if nbo > stats.get("best_day_net_bo", 0):
+        if "best_day_net_bo" not in stats or nbo > stats.get("best_day_net_bo", 0):
             stats["best_day_net_bo"] = nbo
             stats["best_day_date_bo"] = today
-        if nib > stats.get("best_day_net_ib", 0):
+        if "best_day_net_ib" not in stats or nib > stats.get("best_day_net_ib", 0):
             stats["best_day_net_ib"] = nib
             stats["best_day_date_ib"] = today
         if "worst_day_net_ib" not in stats or nib < stats.get("worst_day_net_ib", 0):
             stats["worst_day_net_ib"] = nib
             stats["worst_day_date_ib"] = today
         inc = int(day.get("income_sell") or 0)
-        if inc > stats.get("best_day_income_sell", 0):
+        if "best_day_income_sell" not in stats or inc > stats.get("best_day_income_sell", 0):
             stats["best_day_income_sell"] = inc
             stats["best_day_income_date"] = today
 

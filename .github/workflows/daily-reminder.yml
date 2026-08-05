@@ -4,7 +4,7 @@ concurrency:
   cancel-in-progress: true
 on:
   schedule:
-    - cron: '45 21 * * *'
+    - cron: '50 21 * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,19 +20,44 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Skip if reminder already sent today
+        id: guard
+        run: |
+          skip="false"
+          if [ -f .github/reminder-state.json ]; then
+            sent_at=$(jq -r '.sent_at // 0' .github/reminder-state.json 2>/dev/null || echo 0)
+            case "$sent_at" in ''|*[!0-9]*) sent_at=0 ;; esac
+            if [ "$sent_at" -gt 0 ]; then
+              now=$(date +%s)
+              if [ "$sent_at" -le "$now" ]; then
+                today=$(TZ='Etc/GMT-3' date +%F)
+                sent_day=$(TZ='Etc/GMT-3' date -d "@${sent_at}" +%F)
+                if [ "$sent_day" = "$today" ]; then
+                  skip="true"
+                fi
+              fi
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "guard: skip=$skip"
+
       - name: Purge all previous reminder messages
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         run: |
           python3 .github/scripts/purge-messages.py || echo "purge failed, will retry on next run"
 
       - name: Fetch animal fact, prices, and shopping list
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         run: |
           python3 .github/scripts/fetch-data.py || echo "data fetch failed, using fallbacks"
 
       - name: Compute daily craft decision
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         run: |
           python3 .github/scripts/decision.py || echo "decision failed, omitting field"
 
       - name: Send reminder and save state
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         run: |
           fact=""
           image=""
@@ -98,14 +123,15 @@ jobs:
           kept='[]'
           if [ -f "$RUNNER_TEMP/survivor-ids.json" ]; then
             kept=$(cat "$RUNNER_TEMP/survivor-ids.json")
+          else
+            kept=$(jq -c '.ids // []' .github/reminder-state.json 2>/dev/null || echo '[]')
           fi
           new_ids=$(jq -n --arg new "$message_id" --argjson kept "$kept" '$kept[-49:] + [$new]')
           printf '{"ids":%s,"sent_at":%s}\n' "$new_ids" "$(date +%s)" > .github/reminder-state.json
           echo "new state: $(cat .github/reminder-state.json)"
 
-          python3 .github/scripts/update-stats.py
-
-          python3 .github/scripts/generate-chart.py
+          python3 .github/scripts/update-stats.py || echo "stats update failed"
+          python3 .github/scripts/generate-chart.py || echo "chart generation failed"
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"

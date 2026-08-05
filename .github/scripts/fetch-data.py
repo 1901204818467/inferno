@@ -21,6 +21,8 @@ import urllib.request
 
 UA = {"User-Agent": "inferno-reminder/1.0 (GitHub Actions daily reminder)"}
 TMP = os.environ.get("RUNNER_TEMP", "/tmp")
+NET_BUDGET = 360.0  # hard cap on total network time, keeps the job under GitHub's 10-minute workflow timeout
+START = time.monotonic()
 HY = "https://api.hypixel.net/skyblock/bazaar"
 COFL = "https://sky.coflnet.com/api/bazaar"
 WIKI = "https://en.wikipedia.org/w/api.php"
@@ -167,9 +169,12 @@ FACT_INFO = {"text": "", "image_title": "", "image_url": ""}
 def get(url, timeout=20, tries=2):
     last = None
     for attempt in range(tries):
+        remaining = NET_BUDGET - (time.monotonic() - START)
+        if remaining <= 1.0:
+            break
         try:
             req = urllib.request.Request(url, headers=UA)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=min(timeout, remaining)) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             last = exc
@@ -181,10 +186,12 @@ def get(url, timeout=20, tries=2):
                         wait = min(float(ra), 10.0)
                     except ValueError:
                         pass
-            time.sleep(wait)
+            time.sleep(min(wait, max(0.0, remaining - 1.0)))
         except Exception as exc:
             last = exc
-            time.sleep(0.8 * (attempt + 1))
+            time.sleep(min(0.8 * (attempt + 1), max(0.0, remaining - 1.0)))
+    if last is None:
+        last = TimeoutError("network budget exhausted")
     raise last
 
 
@@ -219,7 +226,11 @@ def fmt(n):
         return s.rstrip("0").rstrip(".") + "M"
     if n >= 1000:
         s = "%.1f" % (n / 1000.0)
-        return s.rstrip("0").rstrip(".") + "K"
+        k = s.rstrip("0").rstrip(".")
+        if float(k) >= 1000:
+            s = "%.2f" % (n / 1000000.0)
+            return s.rstrip("0").rstrip(".") + "M"
+        return k + "K"
     return str(int(n))
 
 

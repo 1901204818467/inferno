@@ -51,8 +51,12 @@ def main():
                 date = d.get("date")
                 if net is None or not date or date in seen:
                     continue
+                try:
+                    v = int(net)
+                except (TypeError, ValueError, OverflowError):
+                    continue
                 seen.add(date)
-                pts.append((date, int(net)))
+                pts.append((date, v))
     except FileNotFoundError:
         pass
 
@@ -129,6 +133,8 @@ def main():
         for i in indices:
             x_labels.append((x(i), pts[i][0]))
 
+    lx = x(len(pts) - 1)
+
     svg_parts = [
         '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d"'
         ' viewBox="0 0 %d %d">' % (W, H, W, H),
@@ -162,12 +168,13 @@ def main():
             % (xv, H - 8, FONT, COLOR_TEXT, label)
             for xv, label in x_labels
         ],
-        '<text x="%d" y="%.1f" text-anchor="start"'
+        '<text x="%.1f" y="%.1f" text-anchor="%s"'
         ' font-family="%s" font-size="11" font-weight="600" fill="%s"'
         ' dominant-baseline="middle">%s</text>'
         % (
-            x(len(pts) - 1) + 6,
+            lx - 6 if lx > W - PAD_R - 70 else lx + 6,
             y(values[-1]),
+            "end" if lx > W - PAD_R - 70 else "start",
             FONT,
             COLOR_LINE,
             fmt_axis(values[-1]) + "/day",
