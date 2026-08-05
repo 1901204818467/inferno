@@ -69,6 +69,23 @@ def main():
             stats["craftbuy_days"] = stats.get("craftbuy_days", 0) + 1
             stats["last_craftbuy_savings"] = day.get("craftbuy_savings")
 
+        decision = day.get("decision") or ""
+        if decision == "CRAFT_HYPER":
+            stats["days_hyper"] = stats.get("days_hyper", 0) + 1
+            stats["hyper_rec_total"] = stats.get("hyper_rec_total", 0) + int(day.get("hyper_crafted") or 0)
+        elif decision == "CRAFT_GABAGOOL":
+            stats["days_gabagool"] = stats.get("days_gabagool", 0) + 1
+        elif decision == "SELL_RAW":
+            stats["days_sell"] = stats.get("days_sell", 0) + 1
+        elif decision == "HOLD":
+            stats["days_hold"] = stats.get("days_hold", 0) + 1
+        hm = day.get("hyper_margin")
+        if hm is not None:
+            stats["last_margin_hyper"] = int(hm)
+            if int(hm) > stats.get("best_margin_hyper", 0):
+                stats["best_margin_hyper"] = int(hm)
+                stats["best_margin_date"] = today
+
         if not stats.get("first_day") and today:
             stats["first_day"] = today
         if today:
@@ -102,6 +119,7 @@ def main():
 
     stats["total_net_disp"] = fmt(stats.get("total_net_ib", 0))
     stats["total_spent_disp"] = fmt(stats.get("total_spent_ib", 0))
+    stats["best_margin_hyper_disp"] = fmt(stats.get("best_margin_hyper", 0))
     stats["avg_net_ib_disp"] = fmt(stats.get("avg_net_ib", 0))
     stats["best_day_net_ib_disp"] = fmt(stats.get("best_day_net_ib", 0))
     stats["worst_day_net_ib_disp"] = fmt(stats.get("worst_day_net_ib", 0))

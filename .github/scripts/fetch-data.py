@@ -34,7 +34,7 @@ GABAGOOL = "FUEL_GABAGOOL"
 PROFIT = {
     "crude_per_day": 4030.66,
     "very_crude_per_day": 175,
-    "crude_used_per_day": 675,
+    "crude_used_per_day": 600,
     "coal_per_day": 25,
     "distillate_per_day": 150,
     "fuel_block_per_day": 50,
@@ -43,7 +43,14 @@ PROFIT = {
 }
 
 FUEL_TAGS = ["SULPHURIC_COAL", "CRUDE_GABAGOOL_DISTILLATE", "INFERNO_FUEL_BLOCK"]
-ALL_TAGS = FUEL_TAGS + ["CRUDE_GABAGOOL", "VERY_CRUDE_GABAGOOL", GABAGOOL, "BOOSTER_COOKIE"]
+ALL_TAGS = FUEL_TAGS + [
+    "CRUDE_GABAGOOL",
+    "VERY_CRUDE_GABAGOOL",
+    GABAGOOL,
+    "HEAVY_GABAGOOL",
+    "HYPERGOLIC_GABAGOOL",
+    "BOOSTER_COOKIE",
+]
 SHORT_NAMES = {
     "SULPHURIC_COAL": "coal",
     "CRUDE_GABAGOOL_DISTILLATE": "distillate",
@@ -56,6 +63,8 @@ NAMES = {
     "CRUDE_GABAGOOL": "Crude Gabagool",
     "VERY_CRUDE_GABAGOOL": "Very Crude Gabagool",
     GABAGOOL: "Fuel Gabagool",
+    "HEAVY_GABAGOOL": "Heavy Gabagool",
+    "HYPERGOLIC_GABAGOOL": "Hypergolic Gabagool",
     "BOOSTER_COOKIE": "Booster Cookie",
 }
 
@@ -557,7 +566,7 @@ def fetch_prices():
     fb_bazaar = max(0.0, PROFIT["fuel_block_per_day"] - PROFIT["fuel_blocks_from_bits"])
     fb_buy = int(round(fb_bazaar))
 
-    lines = ["675x Crude Gabagool - free"]
+    lines = ["600x Crude Gabagool - free"]
     total = 0
     all_priced = True
 

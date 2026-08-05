@@ -28,6 +28,10 @@ jobs:
         run: |
           python3 .github/scripts/fetch-data.py || echo "data fetch failed, using fallbacks"
 
+      - name: Compute daily craft decision
+        run: |
+          python3 .github/scripts/decision.py || echo "decision failed, omitting field"
+
       - name: Send reminder and save state
         run: |
           fact=""
@@ -43,7 +47,7 @@ jobs:
             animal_title=$(cat "$RUNNER_TEMP/animal-name.txt")
           fi
 
-          shop_list=$(printf '675x Crude Gabagool - free\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
+          shop_list=$(printf '600x Crude Gabagool - free\n25x Sulphuric Coal\n150x Gabagool Distillate\n50x Inferno Fuel Block')
           if [ -f "$RUNNER_TEMP/shopping-list.txt" ]; then
             shop_list=$(cat "$RUNNER_TEMP/shopping-list.txt")
           fi
@@ -53,9 +57,16 @@ jobs:
           if [ -f "$RUNNER_TEMP/profit.txt" ]; then
             profit_text=$(cat "$RUNNER_TEMP/profit.txt")
           fi
+          decision_text=""
+          if [ -f "$RUNNER_TEMP/decision.txt" ]; then
+            decision_text=$(cat "$RUNNER_TEMP/decision.txt")
+          fi
           icon="https://static.wikia.nocookie.net/hypixel-skyblock/images/3/36/Inferno_Minion_Render.png/revision/latest/scale-to-width-down/256?cb=20220805231410"
 
           fields_json=$(jq -n --arg shop "$shop_list" --arg craft "$craft_steps" '[{name: "Shopping List", value: $shop}, {name: "Crafting", value: $craft}]')
+          if [ -n "$decision_text" ]; then
+            fields_json=$(jq -n --argjson base "$fields_json" --arg decision "$decision_text" '$base + [{name: "Decision", value: $decision}]')
+          fi
           if [ -n "$profit_text" ]; then
             fields_json=$(jq -n --argjson base "$fields_json" --arg profit "$profit_text" '$base + [{name: "Daily Profit", value: $profit}]')
           fi
@@ -98,15 +109,15 @@ jobs:
 
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
+          git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg stockpile-state.json
           if git diff --cached --quiet HEAD; then
             echo "no changes to commit"
           else
             git commit -m "update reminder state and price snapshots"
             git fetch origin
             git merge origin/main --no-edit || true
-            git checkout HEAD -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
-            git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg
+            git checkout HEAD -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg stockpile-state.json
+            git add -A -- .github/reminder-state.json prices.json prices.jsonl stats.json chart.svg stockpile-state.json
             git commit -m "resolve data files" || true
             git push origin HEAD:main || { echo "state push failed - reminder may not be purged" >&2; exit 1; }
           fi
