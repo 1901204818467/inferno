@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-08-06 (merged: former `IFURANAIREADTHISNOW.md` spec + knowledge base)
+**Generated:** 2026-08-06 (single source of truth; former `IFURANAIREADTHISNOW.md` spec was merged here then deleted)
 **Branch:** main
 **Repo:** github.com/1901204818467/inferno
 
@@ -288,6 +288,7 @@ gh workflow run daily-reminder.yml
 ## NOTES
 
 - **This dev machine shell is PowerShell 5.1**: no `&&` (use `;` or `if ($?) {}`), no bash `set VAR="x"` (use `$env:VAR = "x"`), skip Linux-only env vars entirely — plain commands work fine
+- **AGENT GOTCHA — never call git/bash directly in this environment**: the command wrapper injects a bash-style prefix (`set CI="true" && set DEBIAN_FRONTEND=... && git ...`) into any command containing git, which PowerShell 5.1 rejects at parse time ("The token '&&' is not a valid statement separator"). This happens for ANY command that contains the string `git`, including `python -c "...git..."`. The reliable workaround is to drive git through a Python subprocess wrapper script (e.g. a temp file that calls `subprocess.run(["git", ...])` with `cwd` set), or use plain `python <script>.py` for anything non-git. `python -m py_compile`, `python <script>.py`, and `cmdkey /list` all work fine un-wrapped; `git ...` and `python -c "...git..."` do not
 - Checkout lives at repo root (`C:\Users\1\Desktop\Inferno`) — an older version of this doc claimed a nested `...\Inferno\inferno` path; the root is correct
 - **Auto-commit merge**: the workflow merges `origin/main` then forces its own snapshot of the 6 data files to win (`git checkout HEAD --` on reminder-state.json, prices.json, prices.jsonl, stats.json, chart.svg, stockpile-state.json), so manual commits to data files or late deliveries can never break the run — the new message ID always lands in the repo
 - **Chart SVG colors are hardcoded** — visible on light mode GitHub, invisible on dark mode (would need `@media (prefers-color-scheme: dark)`)
@@ -298,7 +299,8 @@ gh workflow run daily-reminder.yml
 - **Wikipedia rate limits**: keyless API can 429 on bursts; lookups spaced ~1s apart, Retry-After backoff, 3-candidate cap — worst case is a fact with no image, never a failure
 - **Coflnet asks for ~1 req/sec** — snapshot + history fetches spaced out; every cofl call is individually optional so one failure can't kill the run
 - **Fetch network budget**: `fetch-data.py` caps total network time at 360s (`NET_BUDGET` + `START` in `get()`), so even an everything-hangs day degrades to missing prices instead of exceeding the workflow's 10-min job timeout — worst case is a thin reminder, never no reminder
-- `.sisyphus/` contains agent session tooling — not project code, ignore
+- `.sisyphus/` and `log.txt` contain agent session tooling — not project code; now covered by `.gitignore` (`__pycache__/`, `*.pyc`, `.sisyphus/`, `log.txt`) so `git add -A` can never sweep them in
+- **Data reset 2026-08-06**: `stats.json`, `prices.json`, `prices.jsonl`, `stockpile-state.json`, and `chart.svg` were wiped to fresh placeholders (stats all-zero, empty history, empty ledger, chart placeholder) — lifetime stats and the chart start clean from that date. The next successful run repopulates everything; `chart.svg` needs 2+ days of data to draw again
 
 ## MINION CALCULATOR REFERENCE
 
