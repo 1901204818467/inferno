@@ -1,11 +1,18 @@
 {
  "schema": 1,
- "last_decision_date": "",
- "very_produced": 0,
+ "last_decision_date": "2026-08-07",
+ "very_produced": 175,
  "very_consumed": 0,
  "hyper_rec": 0,
  "gabagool_batches_rec": 0,
- "last_action": "",
- "last_margin": null,
- "margin_history": []
+ "last_action": "HOLD",
+ "last_margin": 338787,
+ "margin_history": [
+  {
+   "date": "2026-08-07",
+   "action": "HOLD",
+   "hyper_margin": 338787,
+   "gab_margin": -33526
+  }
+ ]
 }

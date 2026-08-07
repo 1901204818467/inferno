@@ -1,11 +1,636 @@
 {
+ "date": "2026-08-07",
+ "generated_at_utc": "2026-08-07T01:04:53Z",
+ "bazaar_age_s": 1,
+ "prices_source": "hypixel.net quick_status",
+ "history_source": "sky.coflnet.com",
  "crude": "free",
- "coal": "-",
- "distillate": "-",
- "fuel_block": "-",
- "fuel_bill": "-",
- "income_sell": "-",
- "income_order": "-",
- "net_buy_order": "-",
- "net_instabuy": "-"
+ "coal": "7.6K",
+ "distillate": "13.6K",
+ "fuel_block": "60.6K",
+ "fuel_bill": "3.65M",
+ "income_sell": "11.36M/day",
+ "income_order": "13.54M/day",
+ "net_buy_order": "8.69M/day",
+ "net_instabuy": "7.71M/day",
+ "items": {
+  "SULPHURIC_COAL": {
+   "tag": "SULPHURIC_COAL",
+   "name": "Sulphuric Coal",
+   "buy_order": 5688,
+   "instabuy": 7645,
+   "instasell": 5688,
+   "sell_order": 7645,
+   "buy_volume_day": 191657,
+   "sell_volume_day": 191339,
+   "buy_moving_week": 474493,
+   "sell_moving_week": 757056,
+   "week": {
+    "buy": {
+     "median": 7578.0,
+     "avg": 7464.4,
+     "min": 6544.9,
+     "max": 7999.1,
+     "mad": 410.7,
+     "points": 81
+    },
+    "sell": {
+     "median": 6000.8,
+     "avg": 5766.8,
+     "min": 2836.4,
+     "max": 6971.2,
+     "mad": 501.0,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      7989,
+      1472
+     ],
+     [
+      7988,
+      1416
+     ],
+     [
+      7987,
+      1467
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      3004,
+      9853
+     ],
+     [
+      3009,
+      9904
+     ],
+     [
+      3035,
+      160
+     ]
+    ],
+    "top3_sell_units": 19917,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": 0.88
+  },
+  "CRUDE_GABAGOOL_DISTILLATE": {
+   "tag": "CRUDE_GABAGOOL_DISTILLATE",
+   "name": "Gabagool Distillate",
+   "buy_order": 9476,
+   "instabuy": 13644,
+   "instasell": 9476,
+   "sell_order": 13644,
+   "buy_volume_day": 28320,
+   "sell_volume_day": 42993,
+   "buy_moving_week": 363735,
+   "sell_moving_week": 649193,
+   "week": {
+    "buy": {
+     "median": 13839.5,
+     "avg": 13843.2,
+     "min": 9999.7,
+     "max": 43014.6,
+     "mad": 401.1,
+     "points": 82
+    },
+    "sell": {
+     "median": 9674.5,
+     "avg": 10057.8,
+     "min": 6000.3,
+     "max": 18549.3,
+     "mad": 652.9,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      46077,
+      563
+     ],
+     [
+      40258,
+      166
+     ],
+     [
+      24952,
+      19
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      8003,
+      1839
+     ],
+     [
+      9001,
+      9846
+     ],
+     [
+      9005,
+      469
+     ]
+    ],
+    "top3_sell_units": 12154,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -1.41
+  },
+  "INFERNO_FUEL_BLOCK": {
+   "tag": "INFERNO_FUEL_BLOCK",
+   "name": "Inferno Fuel Block",
+   "buy_order": 47606,
+   "instabuy": 60587,
+   "instasell": 47606,
+   "sell_order": 60587,
+   "buy_volume_day": 27442,
+   "sell_volume_day": 102014,
+   "buy_moving_week": 118984,
+   "sell_moving_week": 84504,
+   "week": {
+    "buy": {
+     "median": 60594.3,
+     "avg": 61077.0,
+     "min": 58877.5,
+     "max": 62049.5,
+     "mad": 11.0,
+     "points": 82
+    },
+    "sell": {
+     "median": 56609.5,
+     "avg": 51702.8,
+     "min": 68.3,
+     "max": 59000.6,
+     "mad": 1521.9,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      62045,
+      200
+     ],
+     [
+      62031,
+      6720
+     ],
+     [
+      62031,
+      40
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      43043,
+      372
+     ],
+     [
+      43043,
+      3072
+     ],
+     [
+      43504,
+      58
+     ]
+    ],
+    "top3_sell_units": 3502,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -0.01
+  },
+  "CRUDE_GABAGOOL": {
+   "tag": "CRUDE_GABAGOOL",
+   "name": "Crude Gabagool",
+   "buy_order": 299,
+   "instabuy": 493,
+   "instasell": 299,
+   "sell_order": 493,
+   "buy_volume_day": 1338493,
+   "sell_volume_day": 6225652,
+   "buy_moving_week": 470147,
+   "sell_moving_week": 9640357,
+   "week": {
+    "buy": {
+     "median": 552.1,
+     "avg": 533.6,
+     "min": 332.2,
+     "max": 562.1,
+     "mad": 3.5,
+     "points": 82
+    },
+    "sell": {
+     "median": 355.2,
+     "avg": 348.5,
+     "min": 260.3,
+     "max": 512.0,
+     "mad": 66.2,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      553,
+      94
+     ],
+     [
+      552,
+      69461
+     ],
+     [
+      552,
+      865
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      260,
+      46021
+     ],
+     [
+      260,
+      212689
+     ],
+     [
+      261,
+      68777
+     ]
+    ],
+    "top3_sell_units": 327487,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -10.72
+  },
+  "VERY_CRUDE_GABAGOOL": {
+   "tag": "VERY_CRUDE_GABAGOOL",
+   "name": "Very Crude Gabagool",
+   "buy_order": 59889,
+   "instabuy": 68699,
+   "instasell": 59889,
+   "sell_order": 68699,
+   "buy_volume_day": 109126,
+   "sell_volume_day": 694053,
+   "buy_moving_week": 585250,
+   "sell_moving_week": 711381,
+   "week": {
+    "buy": {
+     "median": 79321.5,
+     "avg": 76780.2,
+     "min": 58188.8,
+     "max": 86092.1,
+     "mad": 3858.2,
+     "points": 82
+    },
+    "sell": {
+     "median": 75494.8,
+     "avg": 72665.9,
+     "min": 50015.4,
+     "max": 83211.3,
+     "mad": 3465.9,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      78059,
+      278
+     ],
+     [
+      78058,
+      61
+     ],
+     [
+      78058,
+      107
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      57901,
+      550
+     ],
+     [
+      57901,
+      15
+     ],
+     [
+      57902,
+      1024
+     ]
+    ],
+    "top3_sell_units": 1589,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -13.39
+  },
+  "FUEL_GABAGOOL": {
+   "tag": "FUEL_GABAGOOL",
+   "name": "Fuel Gabagool",
+   "buy_order": 10247,
+   "instabuy": 26582,
+   "instasell": 10247,
+   "sell_order": 26582,
+   "buy_volume_day": 12373,
+   "sell_volume_day": 206152,
+   "buy_moving_week": 58563,
+   "sell_moving_week": 36060,
+   "week": {
+    "buy": {
+     "median": 19646.5,
+     "avg": 21500.1,
+     "min": 18731.8,
+     "max": 39989.2,
+     "mad": 8.4,
+     "points": 82
+    },
+    "sell": {
+     "median": 10103.5,
+     "avg": 11362.7,
+     "min": 1.0,
+     "max": 16634.2,
+     "mad": 6350.0,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      35517,
+      8
+     ],
+     [
+      30349,
+      2992
+     ],
+     [
+      28959,
+      3
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      1,
+      71660
+     ],
+     [
+      3,
+      71680
+     ],
+     [
+      1083,
+      24
+     ]
+    ],
+    "top3_sell_units": 143364,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": 35.3
+  },
+  "HEAVY_GABAGOOL": {
+   "tag": "HEAVY_GABAGOOL",
+   "name": "Heavy Gabagool",
+   "buy_order": 280000,
+   "instabuy": 446903,
+   "instasell": 280000,
+   "sell_order": 446903,
+   "buy_volume_day": 6106,
+   "sell_volume_day": 3825,
+   "buy_moving_week": 5226,
+   "sell_moving_week": 5069,
+   "week": {
+    "buy": {
+     "median": 475561.5,
+     "avg": 476645.7,
+     "min": 446903.3,
+     "max": 488999.5,
+     "mad": 5.7,
+     "points": 82
+    },
+    "sell": {
+     "median": 385732.2,
+     "avg": 354569.9,
+     "min": 90000.0,
+     "max": 409530.4,
+     "mad": 12813.6,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      489000,
+      1327
+     ],
+     [
+      484998,
+      42
+     ],
+     [
+      484994,
+      12
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      239097,
+      750
+     ],
+     [
+      239107,
+      115
+     ],
+     [
+      239124,
+      64
+     ]
+    ],
+    "top3_sell_units": 929,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -6.03
+  },
+  "HYPERGOLIC_GABAGOOL": {
+   "tag": "HYPERGOLIC_GABAGOOL",
+   "name": "Hypergolic Gabagool",
+   "buy_order": 4275946,
+   "instabuy": 4550000,
+   "instasell": 4275946,
+   "sell_order": 4550000,
+   "buy_volume_day": 2432,
+   "sell_volume_day": 3678,
+   "buy_moving_week": 8845,
+   "sell_moving_week": 7822,
+   "week": {
+    "buy": {
+     "median": 5289998.9,
+     "avg": 5258821.2,
+     "min": 4499997.3,
+     "max": 5754716.0,
+     "mad": 62297.8,
+     "points": 82
+    },
+    "sell": {
+     "median": 4973214.1,
+     "avg": 4781289.2,
+     "min": 798526.2,
+     "max": 5110051.6,
+     "mad": 126791.5,
+     "points": 82
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      5323433,
+      25
+     ],
+     [
+      5323426,
+      3
+     ],
+     [
+      5253004,
+      4
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      3886032,
+      166
+     ],
+     [
+      3886036,
+      155
+     ],
+     [
+      3886036,
+      128
+     ]
+    ],
+    "top3_sell_units": 449,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -13.99
+  },
+  "BOOSTER_COOKIE": {
+   "tag": "BOOSTER_COOKIE",
+   "name": "Booster Cookie",
+   "buy_order": 11573992,
+   "instabuy": 11802982,
+   "instasell": 11573992,
+   "sell_order": 11802982,
+   "buy_volume_day": 13883,
+   "sell_volume_day": 14399,
+   "buy_moving_week": 93051,
+   "sell_moving_week": 87334,
+   "week": {
+    "buy": {
+     "median": 12309999.8,
+     "avg": 12263674.6,
+     "min": 11499999.8,
+     "max": 12799998.6,
+     "mad": 181969.8,
+     "points": 81
+    },
+    "sell": {
+     "median": 12098630.6,
+     "avg": 12044741.1,
+     "min": 11251264.9,
+     "max": 12521096.5,
+     "mad": 176391.1,
+     "points": 81
+    }
+   },
+   "order_book": {
+    "top_buy_orders": [
+     [
+      11825090,
+      5
+     ],
+     [
+      11825090,
+      2
+     ],
+     [
+      11825089,
+      18
+     ]
+    ],
+    "top_sell_orders": [
+     [
+      11567254,
+      128
+     ],
+     [
+      11567254,
+      25
+     ],
+     [
+      11567255,
+      6
+     ]
+    ],
+    "top3_sell_units": 159,
+    "thin": false
+   },
+   "today_vs_week_median_buy_pct": -4.12
+  }
+ },
+ "qty": {
+  "SULPHURIC_COAL": 25,
+  "CRUDE_GABAGOOL_DISTILLATE": 150,
+  "INFERNO_FUEL_BLOCK": 23.33
+ },
+ "subtotals": {
+  "SULPHURIC_COAL": {
+   "qty": 25,
+   "buy_order": 142200,
+   "instabuy": 191125
+  },
+  "CRUDE_GABAGOOL_DISTILLATE": {
+   "qty": 150,
+   "buy_order": 1421400,
+   "instabuy": 2046600
+  },
+  "INFERNO_FUEL_BLOCK": {
+   "qty": 23.33,
+   "buy_order": 1110647,
+   "instabuy": 1413494
+  }
+ },
+ "bill": {
+  "buy_order": 2674247,
+  "instabuy": 3651219
+ },
+ "income": {
+  "instasell": 11362513,
+  "sell_order": 13542219
+ },
+ "net": {
+  "buy_order": 8688265,
+  "instabuy": 7711293
+ },
+ "alerts": {
+  "spike": null,
+  "spike_pct": {
+   "SULPHURIC_COAL": null,
+   "CRUDE_GABAGOOL_DISTILLATE": null,
+   "INFERNO_FUEL_BLOCK": null
+  },
+  "stockup": null,
+  "stockup_pct": null,
+  "craftbuy": null,
+  "craftbuy_savings": null
+ },
+ "cookie": {
+  "buy_order": 11573992,
+  "instabuy": 11802982,
+  "week_median_buy": 12309999.8
+ }
 }
