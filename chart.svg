@@ -1,4 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="700" height="180" viewBox="0 0 700 180">
 <rect width="700" height="180" fill="transparent"/>
-<text x="350" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#57606a">not enough data yet — chart will appear after 2+ days</text>
+<text x="350" y="18" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#24292f">Daily Net Profit (instabuy)</text>
+<line x1="56" y1="152.0" x2="688" y2="152.0" stroke="#d0d7de33" stroke-width="1"/>
+<line x1="56" y1="90.0" x2="688" y2="90.0" stroke="#d0d7de33" stroke-width="1"/>
+<line x1="56" y1="28.0" x2="688" y2="28.0" stroke="#d0d7de33" stroke-width="1"/>
+<polygon points="56.0,152.0 56.0,141.7 688.0,38.3 688.0,152.0" fill="#FF6B3522" stroke="none"/>
+<polyline points="56.0,141.7 688.0,38.3" fill="none" stroke="#FF6B35" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="56.0,141.7 688.0,90.0" fill="none" stroke="#0969da" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+<text x="52" y="152.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#57606a" dominant-baseline="middle">7.7M</text>
+<text x="52" y="90.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#57606a" dominant-baseline="middle">7.9M</text>
+<text x="52" y="28.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#57606a" dominant-baseline="middle">8.1M</text>
+<text x="56.0" y="172" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#57606a">2026-08-07</text>
+<text x="688.0" y="172" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" fill="#57606a">2026-08-08</text>
+<text x="682.0" y="38.3" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" font-weight="600" fill="#FF6B35" dominant-baseline="middle">8.1M/day</text>
+<line x1="600" y1="18" x2="622" y2="18" stroke="#0969da" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="628" y="22" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#57606a">7d avg</text>
 </svg>
