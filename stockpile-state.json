@@ -1,18 +1,11 @@
 {
  "schema": 1,
- "last_decision_date": "2026-08-08",
- "very_produced": 175,
- "very_consumed": 144,
- "hyper_rec": 4,
+ "last_decision_date": "",
+ "very_produced": 0,
+ "very_consumed": 0,
+ "hyper_rec": 0,
  "gabagool_batches_rec": 0,
- "last_action": "CRAFT_HYPER",
- "last_margin": 573181,
- "margin_history": [
-  {
-   "date": "2026-08-08",
-   "action": "CRAFT_HYPER",
-   "hyper_margin": 573181,
-   "gab_margin": -34285
-  }
- ]
+ "last_action": "",
+ "last_margin": null,
+ "margin_history": []
 }
