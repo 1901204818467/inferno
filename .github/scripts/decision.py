@@ -211,66 +211,42 @@ def trigger_price(rec):
 
 
 def decision_lines(rec, decision, n, held):
-    lines = []
-    gab_gated = bool(rec["gab_vol"] < GATES["gab_vol_min"])
-    thin = " (thin)" if gab_gated else ""
-    leaderboard = "Margins vs sell raw: Hypergolic %s/unit | Gabagool %s/very%s | sell very %s/very" % (
-        fmt_signed(rec["hyper_margin"]),
-        fmt_signed(rec["gab_margin"]),
-        thin,
-        fmt(rec["very_so"]) or "-",
-    )
-
     if decision == "CRAFT_HYPER":
         coal_needed = n * RECIPES["hypergolic"]["coal"]
         very_used = n * RECIPES["hypergolic"]["very"]
-        delta = n * rec["hyper_margin"] if rec["hyper_margin"] is not None else None
-        lines.append("Decision - Craft %dx Hypergolic - sell order" % n)
-        lines.append(
-            "%s each | %s/day vs selling very raw | uses %s very + %s coal"
-            % (fmt_signed(rec["hyper_margin"]), fmt_signed(delta), fmt_int(very_used), fmt_int(coal_needed))
-        )
-        lines.append(leaderboard)
-        lines.append("Stockpile - %s very held" % fmt_int(held))
-    elif decision == "CRAFT_GABAGOOL":
-        delta = PROFIT["very_crude_per_day"] * rec["gab_margin"] if rec["gab_margin"] is not None else None
-        lines.append("Decision - Craft %sx Fuel Gabagool - sell order" % fmt_int(PROFIT["very_crude_per_day"] * 8))
-        lines.append(
-            "%s/very | %s/day vs selling very raw | uses %d very + %d coal"
+        return [
+            "Craft %dx Hypergolic | %s/unit vs sell raw | %s very + %s coal"
+            % (n, fmt_signed(rec["hyper_margin"]), fmt_int(very_used), fmt_int(coal_needed))
+        ]
+    if decision == "CRAFT_GABAGOOL":
+        made = fmt_int(PROFIT["very_crude_per_day"] * RECIPES["gabagool"]["makes"])
+        return [
+            "Craft %sx Fuel Gabagool | %s/very vs sell raw | %d very + %d coal"
             % (
+                made,
                 fmt_signed(rec["gab_margin"]),
-                fmt_signed(delta),
                 PROFIT["very_crude_per_day"],
                 PROFIT["very_crude_per_day"] * RECIPES["gabagool"]["coal"],
             )
-        )
-        lines.append(leaderboard)
-        lines.append("Stockpile - %s very held" % fmt_int(held))
-    elif decision == "HOLD":
-        trg = trigger_price(rec)
-        lines.append("Decision - Hold - market falling")
+        ]
+    if decision == "HOLD":
+        parts = ["Hold"]
         vp = pct_below(rec["very_is"], rec["very_wm"])
         hp = pct_below(rec["hyper_is"], rec["hyper_wm"])
-        bits = []
         if vp is not None:
-            bits.append("very crude %d%% below 7d avg" % vp)
+            parts.append("very -%d%% vs 7d avg" % vp)
         if hp is not None:
-            bits.append("hypergolic %d%% below 7d avg" % hp)
-        lines.append(" | ".join(bits))
+            parts.append("hyper -%d%% vs 7d avg" % hp)
+        trg = trigger_price(rec)
         if trg:
-            lines.append("Craft trigger: hypergolic sell order > %s | margin %s now" % (fmt(trg), fmt_signed(rec["hyper_margin"])))
-        else:
-            lines.append("Craft trigger: none until prices recover")
-        lines.append(leaderboard)
-        lines.append("Stockpile - %s very held | sell raw if you need coins" % fmt_int(held))
-    else:
-        so = rec["very_so"] or rec["very_is"]
-        daily = PROFIT["very_crude_per_day"] * so * (1.0 - PROFIT["sell_tax"])
-        lines.append("Decision - Sell %dx Very Crude - sell order" % PROFIT["very_crude_per_day"])
-        lines.append("%s/very | %s/day | best play today" % (fmt(so), fmt(daily)))
-        lines.append(leaderboard)
-        lines.append("Stockpile - %s very held" % fmt_int(held))
-    return lines
+            parts.append("trigger > %s" % fmt(trg))
+        return [" | ".join(parts)]
+    so = rec["very_so"] or rec["very_is"]
+    daily = PROFIT["very_crude_per_day"] * so * (1.0 - PROFIT["sell_tax"])
+    return [
+        "Sell %dx Very Crude | %s/very | %s/day"
+        % (PROFIT["very_crude_per_day"], fmt(so), fmt(daily))
+    ]
 
 
 def main():

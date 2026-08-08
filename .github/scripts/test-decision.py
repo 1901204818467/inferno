@@ -83,8 +83,8 @@ def main():
     proc, txt, st = run_case(prices_fixture(very_today, 5796, gab_today, hyper_today))
     cases += 1
     expect(proc.returncode == 0, "HOLD case exits 0")
-    expect(txt.startswith("Decision - Hold - market falling"), "HOLD case: %r" % txt.splitlines()[0] if txt else "empty")
-    expect("very crude 28% below 7d avg" in txt, "HOLD case shows very crude drawdown pct")
+    expect(txt.startswith("Hold |"), "HOLD case: %r" % txt.splitlines()[0] if txt else "empty")
+    expect("very -28% vs 7d avg" in txt, "HOLD case shows very crude drawdown pct")
     expect(st["very_produced"] == 175 and st["very_consumed"] == 0, "HOLD case rolls all 175 into stockpile")
     expect(st["last_action"] == "HOLD", "HOLD case records last_action")
 
@@ -94,8 +94,8 @@ def main():
     proc, txt, st = run_case(prices_fixture(very_strong, 5796, gab_dead, hyper_strong))
     cases += 1
     expect(proc.returncode == 0, "CRAFT_HYPER case exits 0")
-    expect(txt.startswith("Decision - Craft 4x Hypergolic - sell order"), "CRAFT_HYPER case crafts 4: %r" % (txt.splitlines()[0] if txt else "empty"))
-    expect("uses 144 very + 1,204 coal" in txt, "CRAFT_HYPER case shows exact inputs")
+    expect(txt.startswith("Craft 4x Hypergolic |"), "CRAFT_HYPER case crafts 4: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect("144 very + 1,204 coal" in txt, "CRAFT_HYPER case shows exact inputs")
     expect(st["very_produced"] == 175 and st["very_consumed"] == 144, "CRAFT_HYPER case consumes 144, holds 31")
     expect(st["hyper_rec"] == 4, "CRAFT_HYPER case records 4 hypergolics")
 
@@ -105,21 +105,21 @@ def main():
     proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_healthy, hyper_bad))
     cases += 1
     expect(proc.returncode == 0, "CRAFT_GABAGOOL case exits 0")
-    expect(txt.startswith("Decision - Craft 1,400x Fuel Gabagool - sell order"), "CRAFT_GABAGOOL case: %r" % (txt.splitlines()[0] if txt else "empty"))
-    expect("+34.6K/very" in txt, "CRAFT_GABAGOOL case shows honest margin")
+    expect(txt.startswith("Craft 1,400x Fuel Gabagool |"), "CRAFT_GABAGOOL case: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect("+34.6K/very vs sell raw" in txt, "CRAFT_GABAGOOL case shows honest margin")
     expect(st["very_consumed"] == 175, "CRAFT_GABAGOOL case consumes all 175")
 
     hyper_noweek = item(4800000, 5200000, wm=None, vol=991)
     proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_dead, hyper_noweek))
     cases += 1
     expect(proc.returncode == 0, "no-week-history case exits 0")
-    expect(txt.startswith("Decision - Craft 4x Hypergolic - sell order"), "no-week-history case falls back to spot anchor: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(txt.startswith("Craft 4x Hypergolic |"), "no-week-history case falls back to spot anchor: %r" % (txt.splitlines()[0] if txt else "empty"))
 
     hyper_dead = item(3800000, 4000000, wm=4200000, vol=991)
     proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_dead, hyper_dead))
     cases += 1
     expect(proc.returncode == 0, "SELL_RAW case exits 0")
-    expect(txt.startswith("Decision - Sell 175x Very Crude - sell order"), "SELL_RAW case: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(txt.startswith("Sell 175x Very Crude |"), "SELL_RAW case: %r" % (txt.splitlines()[0] if txt else "empty"))
     expect(st["very_consumed"] == 175, "SELL_RAW case consumes all 175")
 
     proc, txt, st = run_case(None)
@@ -134,20 +134,20 @@ def main():
     cases += 1
     expect(proc2.returncode == 0, "dedup rerun exits 0")
     expect(st2["very_produced"] == 175 and st2["very_consumed"] == 144, "dedup rerun does not double-add")
-    expect(txt2.startswith("Decision - Craft 5x Hypergolic"), "dedup rerun crafts from stockpile: %r" % (txt2.splitlines()[0] if txt2 else "empty"))
+    expect(txt2.startswith("Craft 5x Hypergolic |"), "dedup rerun crafts from stockpile: %r" % (txt2.splitlines()[0] if txt2 else "empty"))
 
     hyper_no_instasell = item(0, 5500000, wm=5100000, vol=991)
     proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_dead, hyper_no_instasell))
     cases += 1
     expect(proc.returncode == 0, "floor-gate hyper case exits 0")
-    expect(txt.startswith("Decision - Sell 175x Very Crude"), "floor-gate hyper blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(txt.startswith("Sell 175x Very Crude |"), "floor-gate hyper blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
     expect(st["very_consumed"] == 175, "floor-gate hyper case sells raw")
 
     gab_no_instasell = item(0, 20000, wm=20000, vol=40000)
     proc, txt, st = run_case(prices_fixture(very_ok, 5796, gab_no_instasell, hyper_bad))
     cases += 1
     expect(proc.returncode == 0, "floor-gate gab case exits 0")
-    expect(txt.startswith("Decision - Sell 175x Very Crude"), "floor-gate gab blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
+    expect(txt.startswith("Sell 175x Very Crude |"), "floor-gate gab blocks craft on missing instasell: %r" % (txt.splitlines()[0] if txt else "empty"))
     expect(st["very_consumed"] == 175, "floor-gate gab case sells raw")
 
     proc = subprocess.run(
