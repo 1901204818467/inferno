@@ -113,12 +113,25 @@ jobs:
 
           payload=$(jq -n --arg uid "$USER_ID" --argjson embeds "$embeds" '{content: ("<@" + $uid + ">"), embeds: $embeds}')
 
-          response=$(curl -s --max-time 30 --retry 3 --retry-delay 5 -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true")
-          message_id=$(printf '%s' "$response" | jq -r '.id // empty' || true)
-          if [ -z "$message_id" ]; then
-            echo "Failed to send reminder: $(printf '%s' "$response" | head -c 300)"
-            exit 1
-          fi
+          deadline=$(( $(date +%s) + 240 ))
+          message_id=""
+          while [ -z "$message_id" ]; do
+            response=$(curl -s --fail-with-body --connect-timeout 10 --max-time 25 -H "Content-Type: application/json" -d "$payload" "${WEBHOOK_URL}?wait=true") || true
+            message_id=$(printf '%s' "$response" | jq -r '.id // empty' 2>/dev/null || true)
+            if [ -z "$message_id" ]; then
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "Failed to send reminder: $(printf '%s' "$response" | head -c 300)"
+                exit 1
+              fi
+              ra=$(printf '%s' "$response" | jq -r '.retry_after // 0' 2>/dev/null || echo 0)
+              case "$ra" in ''|*[!0-9]*) ra=0 ;; esac
+              if [ "$ra" -gt 0 ] && [ "$ra" -le 30 ]; then
+                sleep "$ra"
+              else
+                sleep 5
+              fi
+            fi
+          done
 
           kept='[]'
           if [ -f "$RUNNER_TEMP/survivor-ids.json" ]; then

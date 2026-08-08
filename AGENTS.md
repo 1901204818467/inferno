@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-GitHub Actions + stdlib-only Python 3.12 automation: a daily Discord webhook reminder for refueling 25x Inferno T3 minions in Hypixel Skyblock. Targets 21:50 UTC (00:50 GMT+3) daily — enforced by a watchdog (GitHub's cron scheduler can fire 30-120 min late, see NOTES), sends a Discord embed with a shopping list, crafting steps, live bazaar prices, daily profit estimate, a random fact + picture, and price anomaly alerts. Computes a craft-vs-sell decision, then commits state back to the repo. Free tier, public repo, zero API keys.
+GitHub Actions + stdlib-only Python 3.12 automation: a daily Discord webhook reminder for refueling 25x Inferno T3 minions in Hypixel Skyblock. Targets 21:50 UTC (00:50 GMT+3) daily — triggered on time by an external cron-job.org dispatch (GitHub's own cron scheduler can fire 30-120 min late, see NOTES), sends a Discord embed with a shopping list, crafting steps, live bazaar prices, daily profit estimate, a random fact + picture, and price anomaly alerts. Computes a craft-vs-sell decision, then commits state back to the repo. Free tier, public repo, zero API keys.
 
 ## STRUCTURE
 
@@ -33,7 +33,7 @@ Outside the repo (reference material, not part of the reminder): `Minion_Calcula
 | Task | Location | Notes |
 |------|----------|-------|
 | Recipes, profit model, data model, decision rules | THIS FILE — sections below | Recipes section is the source of truth for every quantity |
-| Pipeline wiring / entry point | `.github/workflows/daily-reminder.yml` | cron `50 21 * * *` UTC + workflow_dispatch; delivery enforced by `reminder-watchdog.yml` |
+| Pipeline wiring / entry point | `.github/workflows/daily-reminder.yml` | cron `50 21 * * *` UTC + workflow_dispatch; on-time delivery via external cron-job.org dispatch, backup by `reminder-watchdog.yml` |
 | Prices, facts, PROFIT constants | `.github/scripts/fetch-data.py` | largest script (~800 lines) |
 | Craft-vs-sell decision logic | `.github/scripts/decision.py` | RECIPES + GATES dicts |
 | Tests | `.github/scripts/test-decision.py` | only test in repo; manual, not CI |
@@ -262,6 +262,10 @@ Set in GitHub repo Settings > Secrets and variables > Actions:
 
 These are NEVER hardcoded, never echo'd to logs. GitHub automatically masks them in Actions output.
 
+The on-time dispatch token is a fine-grained PAT (repo-scoped, Actions read/write) that lives ONLY
+inside the cron-job.org job config (Authorization request header) — it is NOT a repo secret and
+never appears in the repo.
+
 ## COMMANDS
 
 ```bash
@@ -293,7 +297,12 @@ gh workflow run daily-reminder.yml
 - **Auto-commit merge**: the workflow merges `origin/main` then forces its own snapshot of the 6 data files to win (`git checkout HEAD --` on reminder-state.json, prices.json, prices.jsonl, stats.json, chart.svg, stockpile-state.json), so manual commits to data files or late deliveries can never break the run — the new message ID always lands in the repo
 - **Chart SVG colors are hardcoded** — visible on light mode GitHub, invisible on dark mode (would need `@media (prefers-color-scheme: dark)`)
 - **shields.io badges have ~5 min cache** — won't update immediately after push; Discord embed footers don't support markdown links (raw URLs auto-link but can't be masked)
-- **GitHub cron runs late**: the Actions scheduler routinely fires `schedule` jobs 30-120 min after the cron minute (observed 2026-08-05: 02:55 Moscow vs 00:45 target). This is platform behavior, not a repo bug. Real timing guarantee comes from `reminder-watchdog.yml`: ticks at 21:50 and every 10 min 22:00-23:50 UTC, and re-dispatches `daily-reminder.yml` unless `reminder-state.json`'s `sent_at` is already today (Moscow). The guard step at the top of daily-reminder.yml (`steps.guard.outputs.skip`) skips the whole job when today's reminder already sent, so overlapping triggers (cron + watchdog + manual dispatch) can't double-send; the watchdog throttles re-dispatches to one per 30 min via `.github/dispatch-marker.json` (committed by the watchdog). Known accepted tradeoff: if a run sends but its git push fails, the next watchdog tick re-dispatches -> rare duplicate embed.
+- **Delivery timing — 3 layers, only the first is on-time**: GitHub's `schedule` event has NO SLA and routinely fires 30-120+ min late (observed 28 min to 3h14m across 4 consecutive days, watchdog ticks included), so it can never be the primary trigger. The on-time path is an external cron:
+  1. **Primary (on-time)**: cron-job.org (free tier) POSTs `workflow_dispatch` to `daily-reminder.yml` at exactly 21:50:00 UTC. Job config: schedule `50 21 * * *` in the UTC timezone; URL `https://api.github.com/repos/1901204818467/inferno/actions/workflows/daily-reminder.yml/dispatches`; method POST; body `{"ref":"main"}`; headers `Authorization: Bearer <fine-grained PAT>` (repo-scoped, Actions read/write), `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2022-11-28`, `Content-Type: application/json`. The PAT is stored only in the cron-job.org job, never in the repo.
+  2. **Backup**: GitHub `schedule` `50 21 * * *` on daily-reminder.yml — fires late, but the guard dedups.
+  3. **Last resort**: `reminder-watchdog.yml` ticks `*/10 21-23 * * *` and re-dispatches `daily-reminder.yml` unless `reminder-state.json`'s `sent_at` is already today (Moscow); throttled to one dispatch per 30 min via `.github/dispatch-marker.json`. The guard step (`steps.guard.outputs.skip`) skips the whole job when today's reminder already sent, so overlapping triggers (external cron + schedule + watchdog + manual dispatch) can't double-send. Known accepted tradeoff: if a run sends but its git push fails, the next watchdog tick re-dispatches -> rare duplicate embed.
+- **Send step retries transient Discord failures**: the webhook POST runs in a bash loop with a 240s wall-clock deadline; each attempt is `curl -s --fail-with-body --connect-timeout 10 --max-time 25`; between attempts it sleeps 5s, or honors `retry_after` on a 429 (capped at 30s); it only `exit 1` after the budget is exhausted. Observed 2026-08-07: Discord's gateway returned "upstream connect error ... connection termination" for ~40 min and the old single curl (4 retries/~20s) killed two runs in a row; the loop survives such windows and still fits inside the 10-min job timeout even after fetch-data.py's 360s network budget on a bad day.
+- **Purge drops permanently undeletable ids**: webhook message DELETE returns 403 when the message was created by a rotated/previous webhook (all 18 tracked ids were 403 on 2026-08-07, every run). purge-messages.py now prunes 403 and 404 ids (they can never be deleted) and keeps only 5xx/429/network failures as survivors for retry.
 - **Moscow timezone** is UTC+3 fixed (no DST): workflows use `TZ='Etc/GMT-3'` — works even without tzdata on the runner (the `Europe/Moscow` zone name silently degrades to UTC if tzdata is missing, which would break the sent-today dedup)
 - **Hypixel bazaar age** compares remote API timestamp to local VM clock — clock drift can produce slightly inaccurate age values
 - **Wikipedia rate limits**: keyless API can 429 on bursts; lookups spaced ~1s apart, Retry-After backoff, 3-candidate cap — worst case is a fact with no image, never a failure

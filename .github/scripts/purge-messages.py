@@ -5,8 +5,9 @@ new {"ids": [...]} format and the legacy {"message_id": "..."} format) and
 DELETEs each one through the webhook API. Only the webhook URL and the
 message IDs are needed - no channel permissions.
 
-A delete counts as done when the API returns 204 (success) or 404
-(already gone); anything else keeps the id so a later run can retry.
+A delete counts as done when the API returns 204 (success), 404
+(already gone), or 403 (permanently undeletable - e.g. the webhook
+was rotated); anything else keeps the id so a later run can retry.
 Survivors are written to $RUNNER_TEMP/survivor-ids.json for the caller to
 persist. If the file is missing afterwards, treat the purge as incomplete
 and keep the state untouched.
@@ -49,9 +50,10 @@ def main():
             deleted += 1
             print("purge: %s -> 204 deleted" % mid)
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
+            if exc.code in (403, 404):
                 gone += 1
-                print("purge: %s -> 404 already gone" % mid)
+                label = "already gone" if exc.code == 404 else "permanently undeletable"
+                print("purge: %s -> HTTP %s (%s)" % (mid, exc.code, label))
             else:
                 survivors.append(mid)
                 print("purge: %s -> HTTP %s (kept for retry)" % (mid, exc.code))
