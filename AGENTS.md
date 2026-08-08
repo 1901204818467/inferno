@@ -192,17 +192,14 @@ You can't craft 4.86 hypergolics — only whole ones. 175 very makes 4 with 31 r
 
 ### decision.txt (the embed field)
 
-Plain text, no emojis, `|` separators. Example (HOLD day):
+One line, plain text, no emojis, `|` separators (compact since 2026-08-08 — the old 5-line block was collapsed). Four shapes, one per decision, produced by `decision_lines` in decision.py:
 
-```
-Decision - Hold - market falling
-very crude 28% below 7d avg | hypergolic 23% below 7d avg
-Craft trigger: hypergolic sell order > 4.65M | margin +438.1K now
-Margins vs sell raw: Hypergolic +438.1K/unit | Gabagool +17.6K/very | sell very 66.8K/very
-Stockpile - 175 very held | sell raw if you need coins
-```
+- **CRAFT_HYPER**: `Craft 4x Hypergolic | +573.2K/unit vs sell raw | 144 very + 1,204 coal`
+- **CRAFT_GABAGOOL**: `Craft 1,400x Fuel Gabagool | +17.6K/very vs sell raw | 175 very + 1,400 coal`
+- **HOLD**: `Hold | very -28% vs 7d avg | hyper -23% vs 7d avg | trigger > 4.65M` (falling-%-parts only when computable)
+- **SELL_RAW**: `Sell 175x Very Crude | 66.8K/very | 11.7M/day`
 
-The `(thin)` flag on Gabagool means its liquidity gate blocked it — highest margin on paper, least executable.
+The `(thin)` flag no longer appears in the decision field (liquidity gating is internal; a Gabagool blocked on volume simply isn't recommended — highest margin on paper, least executable).
 
 ## FACT SYSTEM
 
@@ -264,6 +261,8 @@ These are NEVER hardcoded, never echo'd to logs. GitHub automatically masks them
 
 The on-time dispatch token is a fine-grained PAT (repo-scoped, Actions read/write). The canonical store is the repo secret DISPATCH_TOKEN (encrypted at rest by GitHub; no workflow consumes it yet). External services cannot read GitHub secrets, so the VALUE is also pasted into the cron-job.org job config (Authorization request header), inside cron-job.org's account-protected settings. The plain value never appears in any committed file.
 
+The current dispatch PAT was generated 2026-08-08 with **no expiration** (fine-grained PATs allow this). If it ever needs rotating: regenerate in GitHub → update the cron-job.org Authorization header AND the DISPATCH_TOKEN secret with the same new value → revoke the old token. Both copies must always hold the same value, and the header must match the secret exactly or the on-time dispatch silently dies.
+
 ## COMMANDS
 
 ```bash
@@ -308,6 +307,11 @@ gh workflow run daily-reminder.yml
 - **Fetch network budget**: `fetch-data.py` caps total network time at 360s (`NET_BUDGET` + `START` in `get()`), so even an everything-hangs day degrades to missing prices instead of exceeding the workflow's 10-min job timeout — worst case is a thin reminder, never no reminder
 - `.sisyphus/` and `log.txt` contain agent session tooling — not project code; now covered by `.gitignore` (`__pycache__/`, `*.pyc`, `.sisyphus/`, `log.txt`) so `git add -A` can never sweep them in
 - **Data reset 2026-08-06**: `stats.json`, `prices.json`, `prices.jsonl`, `stockpile-state.json`, and `chart.svg` were wiped to fresh placeholders (stats all-zero, empty history, empty ledger, chart placeholder) — lifetime stats and the chart start clean from that date. The next successful run repopulates everything; `chart.svg` needs 2+ days of data to draw again
+- **Data reset 2026-08-08 (second, after a test run polluted the slate)**: a forced test dispatch ran the full pipeline and stamped refuels=1 / first_day=2026-08-08 into stats.json and a CRAFT_HYPER entry into stockpile-state.json. The user wanted 18:00 Moscow to be the TRUE first day, so all 5 data files were wiped again to the same placeholders (commit `b34326d reset data files, allow today fire`) and `reminder-state.json`'s `sent_at` was zeroed to re-open today's guard. A real reminder must fire tonight for the slate to be honest
+- **Same-day test runs consume the day's slots — wipe to re-arm**: three mechanisms dedup per GMT+3 day and a mid-day test run silently consumes all three: (1) stats.json `last_day` (update-stats skips accumulation when last == today), (2) stockpile-state.json `last_decision_date` (decision.py skips ledger rollover when date == last_decision_date), (3) reminder-state.json `sent_at` (guard skips the whole job when sent_day == today). To let a later same-day run count as the real day: reset all 5 data files to placeholders AND zero `sent_at` (or the guard blocks before anything else runs). This exact sequence happened 2026-08-08
+- **`sent_at:0` re-opens today's guard**: the workflow guard skips only when sent_at maps to today (GMT+3). Zeroing it forces the "not sent yet" path, so a manual dispatch or cron test becomes a full pipeline run again. The new send stamps a fresh sent_at. This is the standard way to force a same-day re-fire (used for the 18:00 Moscow test on 2026-08-08)
+- **Cron-job.org dispatch chain verified 2026-08-08 (zero-side-effect test)**: while sent_at held today's timestamp (guard armed), clicking cron-job.org's "Run now" created run 31236823842 — GitHub returned 204 with `x-accepted-github-permissions: actions=write` (proving the PAT's Actions write permission), the run appeared, and the guard correctly skipped the body (4s job, steps Purge/Fetch/Decide/Send all skipped, `guard: skip=true` in the log). A 401/403 would mean no run at all. This proves cron-job.org → PAT → GitHub dispatch works without spamming Discord; the only unproven link is the scheduler clock itself, which cron-job.org's dashboard shows as next-run
+- **gh CLI installed on the dev machine 2026-08-08**: `gh` 2.97.0 at `C:\Users\1\AppData\Local\Programs\gh\bin` (user PATH updated) — used for `gh workflow run daily-reminder.yml` (manual dispatch), `gh run view` (inspect runs), `gh auth status`. Note `python3` is not on this machine's PATH — use `py` (Python 3.14 launcher) or `py -c "..."` for local checks
 
 ## MINION CALCULATOR REFERENCE
 
